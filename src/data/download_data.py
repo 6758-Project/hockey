@@ -18,7 +18,7 @@ def generate_regular_season_game_ids(season: int):
     regular_season_games = 1230 if season <= 2016 else 1271
 
     regular_game_ids = []
-    for game_num in range(1, regular_season_games):
+    for game_num in range(1, regular_season_games+1):
         game_num_padded = str(game_num).zfill(4)
         regular_game_id = str(season) + "02" + game_num_padded
         regular_game_ids.append(regular_game_id)
@@ -60,7 +60,13 @@ def download_games(game_ids: List, datadir: os.PathLike):
         if response.status_code == 404:
             logging.warning(f"No data returned for game ID {game_id} (404), so skipping")
         else:
-            path_to_datafile = os.path.join(datadir, game_id[:4], game_id[4:6], f"{game_id}.json")
+            subseason = "regular" if game_id[4:6] == "02" \
+                          else "postseason" if game_id[4:6] == "03" \
+                          else None
+            if not subseason:
+                raise ValueError(f"{game_id[4:6]} is not a recognized subseason code")
+
+            path_to_datafile = os.path.join(datadir, game_id[:4], subseason, f"{game_id}.json")
             with open(path_to_datafile, "wb") as f:
                 f.write(response.content)
 
@@ -68,7 +74,8 @@ def download_games(game_ids: List, datadir: os.PathLike):
 def create_nhl_data_directory(datadir: os.PathLike, seasons: List[int]):
     """ Creates a directory tree for NHL data.
 
-        Pattern: datadir/season/subseason_code/
+        Pattern: datadir/season/subseason/
+        Ex:  ./data/raw/2016/regular
     """
     for season in seasons:
         os.makedirs(os.path.join(datadir, str(season), "02"), exist_ok=True)
