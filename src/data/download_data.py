@@ -1,23 +1,36 @@
- """
- Downloads data from the NHL API.
- """
-import argparse
+"""
+Downloads data from the NHL API.
+"""
+import os
+import logging
 import requests
 
 from typing import List
 
 
-def download_games(game_ids: List, dest="./data/raw/"):
+game_url_from_id = lambda game_id: f"https://statsapi.web.nhl.com/api/v1/game/{game_id}/feed/live/"
+
+
+def download_games(game_ids: List, datadir: os.PathLike):
     """ Downloads data for a set of NHL Game IDs.
 
         Applies a data directory structure of year/type/ID.json
         Logs warnings if any game ID are misspecified.
     """
-    pass  # TODO
+    for game_id in game_ids:
+        response = requests.get(game_url_from_id(game_id))
+
+        if response.status_code == 404:
+            logging.warning(f"No data returned for game ID {game_id} (404), so skipping")
+        else:
+            path_to_datafile = os.path.join(datadir, game_id[:4], game_id[4:6], f"{game_id}.json")
+            with open(path_to_datafile, "wb") as f:
+                f.write(response.content)
 
 
-def main(args):
-    seasons = [2016, 2017, 2018, 2019, 2020]
+def main():
+    datadir = "./data/raw/"
+    seasons = [2016] # [2016, 2017, 2018, 2019, 2020]
 
     requested_game_ids = []
 
@@ -27,8 +40,8 @@ def main(args):
         # regular season
         for game_num in range(1,regular_season_games):
             game_num_padded = str(game_num).zfill(4)
-            regular_game_id = str(season) + game_num_padded
-            requested_game_ids += regular_game_id
+            regular_game_id = str(season) + "02" + game_num_padded
+            requested_game_ids.append(regular_game_id)
 
         # playoffs
         for rd in range(1, 4+1):
@@ -36,12 +49,15 @@ def main(args):
             for series_num in range(1, series_per_round+1):
                 for game_num in range(1,7+1):
                     playoff_game_id = str(season) + str("03") + str(series_num)+str(game_num)
-                    requested_game_ids += playoff_game_id
+                    requested_game_ids.append(playoff_game_id)
 
-    download_games(requested_game_ids)
+        os.makedirs(os.path.join(datadir, str(season), "02"), exist_ok=True)
+        os.makedirs(os.path.join(datadir, str(season), "03"), exist_ok=True)
+
+    download_games(requested_game_ids, datadir)
 
 
 
 
- if __name__ == '__main__':
-     main()
+if __name__ == '__main__':
+    main()
