@@ -8,6 +8,8 @@ import requests
 
 from typing import List
 
+logging.basicConfig(level=logging.INFO)
+
 
 def generate_regular_season_game_ids(season: int):
     """ For an NHL season starting in year SEASON, return all regular season game IDs.
@@ -37,7 +39,7 @@ def generate_postseason_game_ids(season: int):
         series_per_round = [8, 4, 2, 1][rd-1]
         for series_num in range(1, series_per_round+1):
             for game_num in range(1,7+1):
-                playoff_game_id = str(season) + str("03") + str(series_num)+str(game_num)
+                playoff_game_id = str(season) + str("03") + str(rd).zfill(2) + str(series_num)+str(game_num)
                 postseason_game_ids.append(playoff_game_id)
 
     return postseason_game_ids
@@ -52,13 +54,14 @@ def download_games(game_ids: List, datadir: os.PathLike):
     """ Downloads data for a set of NHL Game IDs.
 
         Applies a data directory structure of year/type/ID.json
-        Logs warnings if any game ID are misspecified.
+        Logs warnings if no data associated with game_id.
     """
     for game_id in game_ids:
         response = requests.get(get_game_url(game_id))
 
         if response.status_code == 404:
-            logging.warning(f"No data returned for game ID {game_id} (404), so skipping")
+            logging.warning(f"No data returned for game ID {game_id} (404), so skipping. " + \
+                             "(does it encode an optional postseason game #5, #6, or #7)?")
         else:
             subseason = "regular" if game_id[4:6] == "02" \
                           else "postseason" if game_id[4:6] == "03" \
@@ -78,23 +81,26 @@ def create_nhl_data_directory(datadir: os.PathLike, seasons: List[int]):
         Ex:  ./data/raw/2016/regular
     """
     for season in seasons:
-        os.makedirs(os.path.join(datadir, str(season), "02"), exist_ok=True)
-        os.makedirs(os.path.join(datadir, str(season), "03"), exist_ok=True)
+        os.makedirs(os.path.join(datadir, str(season), "regular"), exist_ok=True)
+        os.makedirs(os.path.join(datadir, str(season), "postseason"), exist_ok=True)
 
 
 def main(args):
+    logging.info("Creating directory structure...")
     create_nhl_data_directory(args.datadir, args.seasons)
 
-    requested_game_ids = []
     for season in args.seasons:
+        logging.info(f"Generating requests for {season} season...")
 
+        requested_game_ids = []
         if not args.postseason_only:
             requested_game_ids.extend(generate_regular_season_game_ids(season))
 
         if not args.regular_season_only:
             requested_game_ids.extend(generate_postseason_game_ids(season))
 
-    download_games(requested_game_ids, args.datadir)
+        download_games(requested_game_ids, args.datadir)
+        logging.info(f"...{season} season successfully downloaded")
 
 
 
