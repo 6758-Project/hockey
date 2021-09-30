@@ -121,23 +121,27 @@ def parse_game_data(game_id: str, game_data: dict):
 
 
 def get_events_information(
-    game_id: str, game_type: str = "regular", data_dir: str = "../data/raw"
+    game_id: str, data_dir: str = "../data/raw"
 ):
     """
     gets the GOAL and SHOT events information from a specific game.
     The data should be downloaded using the download_data.py script and in ../data directory of the repository
 
         :param str game_id: The game id consisting of 10 digits
-        :param str game_type: The game type. Possible values: {regular, postseason}
         :param str data_dir: the raw data directory where the season year directory reside
         :return: a dataframe of the events information
         :rtype: pd.DataFrame
         :raises FileNotFoundError: if the game file path does not exist
     """
     game_year = game_id[0:4]
+    game_type = game_id[4:6]
+    game_type_str = ''
+    if game_type == '02':
+    	game_type_str = 'regular'
+    elif game_type == '03':
+    	game_type_str = 'postseason'
 
-    # [SARA] should I receive the game_type or look for the game_id in both directories: regular and postseason?
-    game_data_path = os.path.join(data_dir, f"{game_year}/{game_type}/{game_id}.json")
+    game_data_path = os.path.join(data_dir, f"{game_year}/{game_type_str}/{game_id}.json")
 
     # check if the file exist
     game_data = ""
