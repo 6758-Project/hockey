@@ -105,7 +105,7 @@ def PlotBar(DataFrame, Row:str="ModSV%", Col:str="Player", Count:int=20, xlab:st
            xlabel=xlab)    
     
     print('Save plot as ' + DirFd+"/"+Tit+'.jpg')
-    plt.savefig(DirFd+"/"+Tit+'.jpg')
+    plt.savefig(DirFd+"/"+Tit+'.jpg', bbox_inches = "tight")
     
     return print("Plot Created")
 
