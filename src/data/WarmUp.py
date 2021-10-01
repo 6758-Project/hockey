@@ -13,6 +13,7 @@ import pandas as pd
 
 
 
+#--------------------------------------------------------------------
 
 # Something wrong with my pathing above, included the whole function from example.
 def get_player_stats(year: int, player_type: str) -> pd.DataFrame:
@@ -54,11 +55,7 @@ def get_player_stats(year: int, player_type: str) -> pd.DataFrame:
     return df
 
 
-
-
-
-
-
+#--------------------------------------------------------------------
 
 def Save_DataFrame(Data,FileName:str="GoalieData",DirFd:str="data/WarmUp"):
     # Save the data frame in csv format, create directories if they do not exist
@@ -72,13 +69,16 @@ def Save_DataFrame(Data,FileName:str="GoalieData",DirFd:str="data/WarmUp"):
         return print("File exist")
     return print("Data saved")
 
+#--------------------------------------------------------------------
+
 def Splice_DataFrame(DataFrameLarge, Col=["SV%"]):
     # Reduce the size of the data frame by keeping the selected columns
     DataFrameSmall = DataFrameLarge[Col]   
     return DataFrameSmall
         
 
-    
+#--------------------------------------------------------------------    
+
 def AddNewDataColumn(DataFrame, Col1: str="SV%", Col2: str="GP",NewCol: str="ModSV%"):
     # Adding a new data column by multiplying two existing columns, replace NaN with 0
     #print(DataFrame.isna().sum())
@@ -88,13 +88,17 @@ def AddNewDataColumn(DataFrame, Col1: str="SV%", Col2: str="GP",NewCol: str="Mod
     #print(DataFrame.isna().sum())
     return DataFrame    
 
+#--------------------------------------------------------------------
 
-
-def PlotBar(DataFrame, Row:str="ModSV%", Col:str="Player", Count:int=20, xlab:str="Modified Safe Value",ylab:str="Player Name",Tit:str="Goalie Performance Ranking", DirFd:str="data/WarmUp"):
-    # Plot two of the data frame columns on a horizontal bar chart, descending sort automatically, save output image
+# Useless Function Now
+def PlotBar(DataFrame, Row:str="SV%", Col:str="Player", Count:int=20, xlab:str="Safe Value",ylab:str="Player Name",Tit:str="Goalie Performance Ranking", DirFd:str="data/WarmUp"):
+    # Plot two of the data frame columns on a horizontal bar chart, descending sort automatically
     
     Plot_Data = DataFrame[[Col,Row]].sort_values(Row, ascending=False)
-
+    Plot_Data[Row] = Plot_Data[Row].astype('float')
+    #Plot_Data[[Col]] = pd.to_numeric(Plot_Data[Col])
+    #Plot_Data[[Row]] = pd.to_numeric(Plot_Data[Row])
+    
     f, ax = plt.subplots(figsize=(8, 5))
 
     sns.barplot(x=Row, y=Col, data=Plot_Data[0:Count],
@@ -102,25 +106,34 @@ def PlotBar(DataFrame, Row:str="ModSV%", Col:str="Player", Count:int=20, xlab:st
 
     sns.despine(left=True, bottom=True)
     ax.set(title=Tit,ylabel=ylab,
-           xlabel=xlab)    
+           xlabel=xlab,xscale ="log")
     
     print('Save plot as ' + DirFd+"/"+Tit+'.jpg')
     plt.savefig(DirFd+"/"+Tit+'.jpg', bbox_inches = "tight")
     
-    return print("Plot Created")
+    return None
 
+#--------------------------------------------------------------------
+
+def RemoveLowMinPlayers(DataFrame,Min):
+    # Remove players with less than 300 minutes game time.
+    DataFrame = DataFrame.loc[(pd.to_numeric(DataFrame["MIN"])>Min)]    
+    return DataFrame
+
+#--------------------------------------------------------------------
 
 def main_test():
 
     DataFrameAll = get_player_stats(2017, 'goalies')
     Save_DataFrame(DataFrameAll)
     DataFrameFilt = Splice_DataFrame(DataFrameAll,['Player','GP','GA','SA','SV%','MIN'])
-    NewDataFrame = AddNewDataColumn(DataFrameFilt, "SV%", "GP","ModSV%")
+    #NewDataFrame = AddNewDataColumn(DataFrameFilt, "SV%", "GP","ModSV%")
+    NewDataFrame = RemoveLowMinPlayers(DataFrameFilt,300)
     PlotBar(NewDataFrame)
     
     return print("Warm Up Complete")
 
-
+#--------------------------------------------------------------------
 
 if __name__ == '__main__':
     main_test()    
