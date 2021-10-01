@@ -78,7 +78,7 @@ def Splice_DataFrame(DataFrameLarge, Col=["SV%"]):
         
 
 #--------------------------------------------------------------------    
-
+# Useless Function Now
 def AddNewDataColumn(DataFrame, Col1: str="SV%", Col2: str="GP",NewCol: str="ModSV%"):
     # Adding a new data column by multiplying two existing columns, replace NaN with 0
     #print(DataFrame.isna().sum())
@@ -90,7 +90,7 @@ def AddNewDataColumn(DataFrame, Col1: str="SV%", Col2: str="GP",NewCol: str="Mod
 
 #--------------------------------------------------------------------
 
-# Useless Function Now
+
 def PlotBar(DataFrame, Row:str="SV%", Col:str="Player", Count:int=20, xlab:str="Safe Value",ylab:str="Player Name",Tit:str="Goalie Performance Ranking", DirFd:str="data/WarmUp"):
     # Plot two of the data frame columns on a horizontal bar chart, descending sort automatically
     
