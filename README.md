@@ -19,7 +19,7 @@ The image can be found in [`./figures/nhl_rink.png`](./figures/nhl_rink.png).
 ## Installation
 
 To install this package, first setup your Python environment by following the instructions in the [Environment](#environments) section.
-Once you've setup your environment, you can install this package by running the following command from the root directory of your repository. 
+Once you've setup your environment, you can install this package by running the following command from the root directory of your repository.
 
     pip install -e .
 
@@ -42,7 +42,7 @@ Instructions are provided for both methods.
 
 **Note**: If you are having trouble rendering interactive plotly figures and you're using the pip + virtualenv method, try using Conda instead.
 
-### Conda 
+### Conda
 
 Conda uses the provided `environment.yml` file.
 You can ignore `requirements.txt` if you choose this method.
@@ -63,7 +63,7 @@ You should now be able to launch jupyter and see your conda environment:
 
 If you make updates to your conda `environment.yml`, you can use the update command to update your existing environment rather than creating a new one:
 
-    conda env update --file environment.yml    
+    conda env update --file environment.yml
 
 You can create a new environment file using the `create` command:
 
@@ -98,4 +98,9 @@ If you want to create a new `requirements.txt` file, you can use `pip freeze`:
     pip freeze > requirements.txt
 
 
+### NHL Project Tools
+This project also requires installation of the NHL Project Tools library.
+
+To install it in your conda environment, simply run `pip install nhl_api_tools/`
+in the project directory.
 
