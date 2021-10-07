@@ -35,7 +35,10 @@ def parse_game_data(game_id: str, game_data: dict):
             event_code = event_result_info["eventCode"]
             event_desc = event_result_info["description"]
             # doesn't exist in other event types
-            event_secondary_type = event_result_info["secondaryType"]
+            if "secondaryType" in event_result_info.keys():
+                event_secondary_type = event_result_info["secondaryType"]
+            else: 
+                event_secondary_type = None
 
             # event information
             event_about_info = event["about"]
@@ -79,15 +82,21 @@ def parse_game_data(game_id: str, game_data: dict):
             strength_name = None
             strength_code = None
             if event_type_id == "GOAL":
-                empty_net = event_result_info["emptyNet"]
-                game_winning_goal = event_result_info["gameWinningGoal"]
-                strength_name = event_result_info["strength"]["name"]
-                strength_code = event_result_info["strength"]["code"]
+                if "emptyNet" in event_result_info.keys():
+                    empty_net = event_result_info["emptyNet"]
+                if "gameWinningGoal" in event_result_info.keys():
+                    game_winning_goal = event_result_info["gameWinningGoal"]
+                if "strength" in event_result_info.keys():
+                    strength_name = event_result_info["strength"]["name"]
+                    strength_code = event_result_info["strength"]["code"]
 
             # (x,y) coordinates of the event
             coord_info = event["coordinates"]
-            coord_x = coord_info["x"]
-            coord_y = coord_info["y"]
+            
+            coord_x, coord_y = None, None
+            
+            if "x" in coord_info.keys(): coord_x = coord_info["x"]
+            if "y" in coord_info.keys(): coord_y = coord_info["y"]
 
             event_entry = {
                 "id": event_id,
