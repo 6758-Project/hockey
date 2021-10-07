@@ -6,7 +6,7 @@ import os
 import logging
 import requests
 
-from nhl_proj_tools.conventions import create_nhl_data_directory
+from nhl_proj_tools.conventions import create_nhl_data_directory_raw
 from nhl_proj_tools.data_utils import *
 
 logging.basicConfig(level=logging.INFO)
