@@ -6,6 +6,8 @@ import json
 import logging
 import pandas as pd
 
+from nhl_proj_tools.data_utils import generate_regular_season_game_ids, generate_postseason_game_ids
+
 
 def parse_game_data(game_id: str, game_data: dict):
     """
@@ -120,9 +122,7 @@ def parse_game_data(game_id: str, game_data: dict):
     return pd.DataFrame(events)
 
 
-def get_events_information(
-    game_id: str, data_dir: str = "../data/raw"
-):
+def get_events_information(game_id: str, data_dir: str = "../data/raw"):
     """
     gets the GOAL and SHOT events information from a specific game.
     The data should be downloaded using the download_data.py script and in ../data directory of the repository
@@ -146,9 +146,25 @@ def get_events_information(
     # check if the file exist
     game_data = ""
     if not os.path.isfile(game_data_path):
+        import pdb; pdb.set_trace()
         raise FileNotFoundError("file does not exist!")
     else:
         with open(game_data_path) as f:
             game_data = json.load(f)
 
     return parse_game_data(game_id, game_data)
+
+
+
+if __name__ == '__main__':
+    datadir_raw = "/home/jake/Projects/mila/6758/hockey/data/raw"
+    datadir_tidied = "/home/jake/Projects/mila/6758/hockey/data/tidied/"
+    os.makedirs(datadir_tidied, exist_ok=True)
+
+    for season in [2016, 2017, 2018, 2019, 2020]:
+        game_ids = generate_regular_season_game_ids(season) + \
+                   generate_postseason_game_ids(season)
+
+        for game_id in game_ids[:2]:
+            game_cleaned = get_events_information(game_id, data_dir=datadir_raw)
+            game_cleaned.to_csv(os.path.join(datadir_tidied, f"{game_id}.csv"))
