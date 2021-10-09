@@ -6,7 +6,7 @@ import os
 import json
 import logging
 import pandas as pd
-from hockey.src.data.tidy_data import parse_game_data
+from tidy_data import parse_game_data
 
 from typing import List
 
@@ -14,11 +14,11 @@ logging.basicConfig(level=logging.INFO)
 
 
 def save_team_events(
-    team_name: str, 
+    team_name: str,
     data_dir: str = "../data/raw",
     save_dir: str = "../data/",
     years: List[int] = [2016, 2017, 2018, 2019, 2020],
-    seasons: List[str] = ['regular', 'postseason']
+    seasons: List[str] = ["regular", "postseason"],
 ):
     """
     save the team's events data (currently only SHOT and GOAL events) for a specific team
@@ -34,40 +34,47 @@ def save_team_events(
     if not os.path.isdir(save_dir):
         logging.info("Creating teams directory ...")
         os.makedirs(save_dir)
-    
+
     # collect the team's information from all years and seasons
     team_games = []
-    
+
     logging.info(f"Fetching {team_name}'s data ...")
     for game_year in years:
         for season in seasons:
             year_season_games_dir = os.path.join(data_dir, f"{str(game_year)}/{season}")
-            
+
             # all games in the same year and season
-            json_files = [f for f in os.listdir(year_season_games_dir) if os.path.isfile(os.path.join(year_season_games_dir, f))]
+            json_files = [
+                f
+                for f in os.listdir(year_season_games_dir)
+                if os.path.isfile(os.path.join(year_season_games_dir, f))
+            ]
             for game_file in json_files:
                 game_data_path = os.path.join(year_season_games_dir, game_file)
-                game_id = game_file.split('.')[0]
+                game_id = game_file.split(".")[0]
                 with open(game_data_path) as f:
                     game_data = json.load(f)
                     game_info_df = parse_game_data(game_id, game_data)
-                    
+
                     # find the team's events
                     for idx, event in game_info_df.iterrows():
-                        if event['team_name'] == team_name:
+                        if event["team_name"] == team_name:
                             team_event = event.to_dict()
-                            team_event['year'] = game_year
-                            team_event['season'] = season
+                            team_event["year"] = game_year
+                            team_event["season"] = season
                             team_games.append(team_event)
     team_df = pd.DataFrame(team_games)
-    team_df.to_csv(os.path.join(save_dir, team_name+'.csv'), index=False)
-    logging.info(f"Successfully saved {team_name}'s data at {os.path.join(save_dir, team_name+'.csv')}")
-    
+    team_df.to_csv(os.path.join(save_dir, team_name + ".csv"), index=False)
+    logging.info(
+        f"Successfully saved {team_name}'s data at {os.path.join(save_dir, team_name+'.csv')}"
+    )
 
 
-def get_all_teams(data_dir: str = "./data/raw", 
-                  years: List[int] = [2016, 2017, 2018, 2019, 2020],
-                  seasons: List[str] = ['regular', 'postseason']):
+def get_all_teams(
+    data_dir: str = "./data/raw",
+    seasons: List[int] = [2016, 2017, 2018, 2019, 2020],
+    sub_seasons: List[str] = ["regular", "postseason"],
+):
     """
     gets all teams names that participated in the chosen year(s) and season(s)
 
@@ -77,13 +84,17 @@ def get_all_teams(data_dir: str = "./data/raw",
         :return: a list of teams ordered alphabetically
         :rtype: list
     """
-    
+
     teams_set = set()
 
-    for year in years:
-        for season in seasons:
-            season_dir = os.path.join(data_dir, str(year), season)
-            json_files = [f for f in os.listdir(season_dir) if os.path.isfile(os.path.join(season_dir, f))]
+    for season in seasons:
+        for sub_season in sub_seasons:
+            season_dir = os.path.join(data_dir, str(season), sub_season)
+            json_files = [
+                f
+                for f in os.listdir(season_dir)
+                if os.path.isfile(os.path.join(season_dir, f))
+            ]
             for game_file in json_files:
                 file_path = os.path.join(season_dir, game_file)
                 with open(file_path) as f:
@@ -95,26 +106,13 @@ def get_all_teams(data_dir: str = "./data/raw",
     return list(sorted(teams_set))
 
 
-
+## Not used as it is slow - another way is to get the teams info is by reading the
+##  game csv directly from data/cleaned directory
 def main(args):
     logging.info("Getting all teams names")
     teams_lst = get_all_teams(data_dir=args.data_dir)
-    years = [2016, 2017, 2018, 2019, 2020]  # TODO: make them in the argparse
-    seasons = ['regular', 'postseason']
+    seasons = [2016, 2017, 2018, 2019, 2020]
+    sub_seasons = ["regular", "postseason"]
+
     for team in teams_lst:
-        save_team_events(team, args.data_dir, args.save_dir, years, seasons)
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Fetch NHL Teams Games Events')
-
-    parser.add_argument('-d', '--data-dir', nargs='+', default='./data/raw/',
-                        help='Where is the NHL raw data')
-    parser.add_argument('-s', '--save-dir', nargs='+', default='./data/teams',
-                        help='Where to save teams events data')
-
-                        
-    args = parser.parse_args()
-
-
-    main(args)
+        save_team_events(team, args.data_dir, args.save_dir, seasons, sub_seasons)

@@ -12,7 +12,7 @@ from nhl_proj_tools.data_utils import *
 logging.basicConfig(level=logging.INFO)
 
 
-def download_games(game_ids: List, datadir: os.PathLike):
+def download_games(game_ids: list[str], datadir: os.PathLike):
     """ Downloads data for a set of NHL Game IDs.
 
         Applies a data directory structure of year/type/ID.json
@@ -38,7 +38,7 @@ def download_games(game_ids: List, datadir: os.PathLike):
 
 def main(args):
     logging.info("Creating directory structure...")
-    create_nhl_data_directory(args.datadir, args.seasons)
+    create_nhl_data_directory_raw(args.datadir, args.seasons)
 
     for season in args.seasons:
         logging.info(f"Generating requests for {season} season...")
