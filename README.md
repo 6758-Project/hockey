@@ -111,12 +111,23 @@ You can download the raw NHL data using python:
     python src/data/download_data.py
     
 which will download the data into `data/raw` directory.
+
+## Creating the tidy data
     
 Then you can clean the data by running this script:
 
     python src/data/tidy_data.py
     
 which will clean the data in the `data/raw` directory into `csv` files containing the game events (currently only shots and goals) into `data/clean` directory.
+
+## Creating the shot map data
+
+You can create the data files required for the shot maps by running this script:
+
+    python src/data/team_data.py
+	
+This will read the tidy data in the `data/clean` directory and save the summarized data in the `data/games` directory.	
+Afterwards, the Jupyter notebook "shot_maps.ipynb" can be used to visualize the data.
 
 ## Interactive visualization with Jupyter Lab
 To run `notebooks/shot_maps.ipynb` notebook with the interactive visualization of the shots you need to do the following:
