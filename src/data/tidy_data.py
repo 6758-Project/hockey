@@ -13,6 +13,31 @@ from nhl_proj_tools.data_utils import (
 )
 
 
+def flip_coord_to_one_side(game_events_df, right_team, left_team):
+    """
+    Flip the (x,y) coordinates of the shots events to the right side of the rink for both teams
+
+    :param pd.DataFrame game_events_df: all the game events 
+    :param str right_team: the team that started the game on the right side of the rink
+    :param str left_team: the team that started the game on the left side of the rink
+    :return: a dataframe of the game events data after updating
+    :rtype: pd.DataFrame
+    """
+    for idx, row in game_events_df.iterrows():
+        period = row["period"]
+
+        # keep the team who started on the right to the right always
+        if row["shooter_team_name"] == right_team and period % 2 == 0:
+            game_events_df.at[idx, "coordinate_x"] = row["coordinate_x"] * -1
+            game_events_df.at[idx, "coordinate_y"] = row["coordinate_y"] * -1
+
+        # flip the team who started on the left to the right always
+        elif row["shooter_team_name"] == left_team and period % 2 != 0:
+            game_events_df.at[idx, "coordinate_x"] = row["coordinate_x"] * -1
+            game_events_df.at[idx, "coordinate_y"] = row["coordinate_y"] * -1
+    return game_events_df
+
+
 def parse_game_data(game_id: str, game_data: dict):
     """
     parse the game data in a json/dictionary format that has all the events information,
@@ -141,7 +166,30 @@ def parse_game_data(game_id: str, game_data: dict):
                 "coordinate_y": coord_y,
             }
             events.append(event_entry)
-    return pd.DataFrame(events)
+
+    # calculate the median of the x_coordinate to see where did the teams start from (left or right)
+    events_df = pd.DataFrame(events)
+
+    if events_df.empty == False:
+
+        median_df = (
+            events_df[(events_df["period"] == 1)]
+            .groupby(["shooter_team_name", "home_team"])[
+                ["coordinate_x", "coordinate_y"]
+            ]
+            .median()
+            .reset_index()
+        )
+        for idx, row in median_df.iterrows():
+            if row["home_team"] == row["shooter_team_name"]:
+                if (
+                    row["coordinate_x"] > 0
+                ):  # means the home team started on the right side
+                    events_df = flip_coord_to_one_side(events_df, home_team, away_team)
+                else:
+                    events_df = flip_coord_to_one_side(events_df, away_team, home_team)
+
+    return events_df
 
 
 def get_events_information(game_id: str, data_dir: str = "../data/raw"):

@@ -13,6 +13,7 @@ from typing import List
 logging.basicConfig(level=logging.INFO)
 
 
+# slower way
 def save_team_events(
     team_name: str,
     data_dir: str = "../data/raw",
@@ -70,6 +71,65 @@ def save_team_events(
     )
 
 
+def save_games_events(
+    data_dir: str = "../data/cleaned",
+    save_dir: str = "../data/games",
+    years: List[int] = [2016, 2017, 2018, 2019, 2020],
+    sub_seasons: List[str] = ["regular", "postseason"],
+):
+    """
+    save a game's events data (currently only SHOT and GOAL events) for a specific season/year and subseason
+    The raw data should be already downloaded using the download_data.py script and in `../../data` directory in the repository
+    
+        :param str team_name: The unique team name of interest
+        :param str data_dir: the cleaned data directory
+        :param str years: the years of interest
+        :param str seasons: the seasons of interest
+        :param str save_dir: the path for the saved team's information
+    """
+    # check if the save path exists
+    if not os.path.isdir(save_dir):
+        logging.info("Creating games directory ...")
+        os.makedirs(save_dir)
+
+    # all games in the cleaned directory
+    json_files = [
+        f for f in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, f))
+    ]
+
+    # collect the game's information from all years and sub-seasons
+    games_of_the_year_dfs = []
+
+    for game_year in years:
+        for sub_season in sub_seasons:
+
+            games_of_the_year_dfs = []
+
+            for game_json_file in json_files:
+                game_file_year = game_json_file[0:4]
+                game_file_sub_season = game_json_file[4:6]
+
+                if game_file_sub_season == "02":
+                    sub_str = "regular"
+                elif game_file_sub_season == "03":
+                    sub_str = "postseason"
+
+                if game_file_year == str(game_year) and sub_str == sub_season:
+                    game_data_path = os.path.join(data_dir, game_json_file)
+
+                    game_data_df = pd.read_csv(game_data_path)
+                    games_of_the_year_dfs.append(game_data_df)
+
+            # saving all the games in one season year and one sub-season
+            pd.concat(games_of_the_year_dfs).to_csv(
+                os.path.join(save_dir, str(game_year) + "-" + sub_season + ".csv"),
+                index=False,
+            )
+            logging.info(
+                f"Successfully saved {game_year}'s data at {os.path.join(save_dir, str(game_year)+'-'+sub_season+'.csv')}"
+            )
+
+
 def get_all_teams(
     data_dir: str = "./data/raw",
     seasons: List[int] = [2016, 2017, 2018, 2019, 2020],
@@ -106,13 +166,31 @@ def get_all_teams(
     return list(sorted(teams_set))
 
 
-## Not used as it is slow - another way is to get the teams info is by reading the
-##  game csv directly from data/cleaned directory
 def main(args):
-    logging.info("Getting all teams names")
-    teams_lst = get_all_teams(data_dir=args.data_dir)
     seasons = [2016, 2017, 2018, 2019, 2020]
     sub_seasons = ["regular", "postseason"]
 
-    for team in teams_lst:
-        save_team_events(team, args.data_dir, args.save_dir, seasons, sub_seasons)
+    save_games_events(args.data_dir, args.save_dir, seasons, sub_seasons)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Fetch NHL Teams Games Events")
+
+    parser.add_argument(
+        "-d",
+        "--data-dir",
+        nargs="+",
+        default="./data/cleaned/",
+        help="Where is the NHL cleaned data",
+    )
+    parser.add_argument(
+        "-s",
+        "--save-dir",
+        nargs="+",
+        default="./data/games",
+        help="Where to save game data",
+    )
+
+    args = parser.parse_args()
+
+    main(args)
