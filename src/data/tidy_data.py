@@ -1,12 +1,41 @@
 """
 Extracts the events information from the downloaded data with the NHL API.
 """
+import argparse
 import os
 import json
 import logging
 import pandas as pd
 
-from nhl_proj_tools.data_utils import generate_regular_season_game_ids, generate_postseason_game_ids
+from nhl_proj_tools.data_utils import (
+    generate_regular_season_game_ids,
+    generate_postseason_game_ids,
+)
+
+
+def flip_coord_to_one_side(game_events_df, right_team, left_team):
+    """
+    Flip the (x,y) coordinates of the shots events to the right side of the rink for both teams
+
+    :param pd.DataFrame game_events_df: all the game events 
+    :param str right_team: the team that started the game on the right side of the rink
+    :param str left_team: the team that started the game on the left side of the rink
+    :return: a dataframe of the game events data after updating
+    :rtype: pd.DataFrame
+    """
+    for idx, row in game_events_df.iterrows():
+        period = row["period"]
+
+        # keep the team who started on the right to the right always
+        if row["shooter_team_name"] == right_team and period % 2 == 0:
+            game_events_df.at[idx, "coordinate_x"] = row["coordinate_x"] * -1
+            game_events_df.at[idx, "coordinate_y"] = row["coordinate_y"] * -1
+
+        # flip the team who started on the left to the right always
+        elif row["shooter_team_name"] == left_team and period % 2 != 0:
+            game_events_df.at[idx, "coordinate_x"] = row["coordinate_x"] * -1
+            game_events_df.at[idx, "coordinate_y"] = row["coordinate_y"] * -1
+    return game_events_df
 
 
 def parse_game_data(game_id: str, game_data: dict):
@@ -21,6 +50,11 @@ def parse_game_data(game_id: str, game_data: dict):
     """
     events = []
     event_types = set()
+
+    # get the home and away teams
+    home_team = game_data["gameData"]["teams"]["home"]["name"]
+    away_team = game_data["gameData"]["teams"]["away"]["name"]
+
     # loop over all events in the game
     for event in game_data["liveData"]["plays"]["allPlays"]:
 
@@ -35,7 +69,10 @@ def parse_game_data(game_id: str, game_data: dict):
             event_code = event_result_info["eventCode"]
             event_desc = event_result_info["description"]
             # doesn't exist in other event types
-            event_secondary_type = event_result_info["secondaryType"]
+            if "secondaryType" in event_result_info.keys():
+                event_secondary_type = event_result_info["secondaryType"]
+            else:
+                event_secondary_type = None
 
             # event information
             event_about_info = event["about"]
@@ -51,10 +88,10 @@ def parse_game_data(game_id: str, game_data: dict):
             event_goals_away = event_about_info["goals"]["away"]
 
             # shooting/scoring team information
-            team_info = event["team"]
-            team_id = team_info["id"]
-            team_name = team_info["name"]
-            team_code = team_info["triCode"]
+            shooter_team_info = event["team"]
+            shooter_team_id = shooter_team_info["id"]
+            shooter_team_name = shooter_team_info["name"]
+            shooter_team_code = shooter_team_info["triCode"]
 
             # players information (i.e. the shooter/scorer and the goalie)
             # Shooter/scorer information
@@ -79,20 +116,30 @@ def parse_game_data(game_id: str, game_data: dict):
             strength_name = None
             strength_code = None
             if event_type_id == "GOAL":
-                empty_net = event_result_info["emptyNet"]
-                game_winning_goal = event_result_info["gameWinningGoal"]
-                strength_name = event_result_info["strength"]["name"]
-                strength_code = event_result_info["strength"]["code"]
+                if "emptyNet" in event_result_info.keys():
+                    empty_net = event_result_info["emptyNet"]
+                if "gameWinningGoal" in event_result_info.keys():
+                    game_winning_goal = event_result_info["gameWinningGoal"]
+                if "strength" in event_result_info.keys():
+                    strength_name = event_result_info["strength"]["name"]
+                    strength_code = event_result_info["strength"]["code"]
 
             # (x,y) coordinates of the event
             coord_info = event["coordinates"]
-            coord_x = coord_info["x"]
-            coord_y = coord_info["y"]
+
+            coord_x, coord_y = None, None
+
+            if "x" in coord_info.keys():
+                coord_x = coord_info["x"]
+            if "y" in coord_info.keys():
+                coord_y = coord_info["y"]
 
             event_entry = {
                 "id": event_id,
                 "event_index": event_index,
                 "game_id": game_id,
+                "home_team": home_team,
+                "away_team": away_team,
                 "type": event_type_id,
                 "secondary_type": event_secondary_type,
                 "description": event_desc,
@@ -104,9 +151,9 @@ def parse_game_data(game_id: str, game_data: dict):
                 "date": event_date,
                 "goals_home": event_goals_home,
                 "goals_away": event_goals_away,
-                "team_id": team_id,
-                "team_name": team_name,
-                "team_code": team_code,
+                "shooter_team_id": shooter_team_id,
+                "shooter_team_name": shooter_team_name,
+                "shooter_team_code": shooter_team_code,
                 "shooter_name": shooter_name,
                 "shooter_id": shooter_id,
                 "goalie_name": goalie_name,
@@ -119,7 +166,30 @@ def parse_game_data(game_id: str, game_data: dict):
                 "coordinate_y": coord_y,
             }
             events.append(event_entry)
-    return pd.DataFrame(events)
+
+    # calculate the median of the x_coordinate to see where did the teams start from (left or right)
+    events_df = pd.DataFrame(events)
+
+    if events_df.empty == False:
+
+        median_df = (
+            events_df[(events_df["period"] == 1)]
+            .groupby(["shooter_team_name", "home_team"])[
+                ["coordinate_x", "coordinate_y"]
+            ]
+            .median()
+            .reset_index()
+        )
+        for idx, row in median_df.iterrows():
+            if row["home_team"] == row["shooter_team_name"]:
+                if (
+                    row["coordinate_x"] > 0
+                ):  # means the home team started on the right side
+                    events_df = flip_coord_to_one_side(events_df, home_team, away_team)
+                else:
+                    events_df = flip_coord_to_one_side(events_df, away_team, home_team)
+
+    return events_df
 
 
 def get_events_information(game_id: str, data_dir: str = "../data/raw"):
@@ -131,40 +201,62 @@ def get_events_information(game_id: str, data_dir: str = "../data/raw"):
         :param str data_dir: the raw data directory where the season year directory reside
         :return: a dataframe of the events information
         :rtype: pd.DataFrame
-        :raises FileNotFoundError: if the game file path does not exist
     """
     game_year = game_id[0:4]
     game_type = game_id[4:6]
-    game_type_str = ''
-    if game_type == '02':
-    	game_type_str = 'regular'
-    elif game_type == '03':
-    	game_type_str = 'postseason'
+    game_type_str = ""
+    if game_type == "02":
+        game_type_str = "regular"
+    elif game_type == "03":
+        game_type_str = "postseason"
 
-    game_data_path = os.path.join(data_dir, f"{game_year}/{game_type_str}/{game_id}.json")
+    game_data_path = os.path.join(
+        data_dir, f"{game_year}/{game_type_str}/{game_id}.json"
+    )
 
     # check if the file exist
     game_data = ""
     if not os.path.isfile(game_data_path):
-        import pdb; pdb.set_trace()
-        raise FileNotFoundError("file does not exist!")
+        logging.warning(f"game ID: {game_id} doesn't exist, so skipping.")
+        return None
     else:
         with open(game_data_path) as f:
             game_data = json.load(f)
-
-    return parse_game_data(game_id, game_data)
-
+            return parse_game_data(game_id, game_data)
 
 
-if __name__ == '__main__':
-    datadir_raw = "/home/jake/Projects/mila/6758/hockey/data/raw"
-    datadir_tidied = "/home/jake/Projects/mila/6758/hockey/data/tidied/"
-    os.makedirs(datadir_tidied, exist_ok=True)
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description="Save cleaned version of the NHL API Data"
+    )
+
+    parser.add_argument(
+        "-d",
+        "--raw-datadir",
+        nargs="+",
+        default="./data/raw/",
+        help="Where the raw NHL data is in",
+    )
+    parser.add_argument(
+        "-c",
+        "--clean-datadir",
+        nargs="+",
+        default="./data/cleaned/",
+        help="Where the cleaned NHL data is in",
+    )
+
+    args = parser.parse_args()
+
+    # create the cleaned datadir if not exist
+    os.makedirs(args.clean_datadir, exist_ok=True)
 
     for season in [2016, 2017, 2018, 2019, 2020]:
-        game_ids = generate_regular_season_game_ids(season) + \
-                   generate_postseason_game_ids(season)
+        game_ids = generate_regular_season_game_ids(
+            season
+        ) + generate_postseason_game_ids(season)
 
-        for game_id in game_ids[:2]:
-            game_cleaned = get_events_information(game_id, data_dir=datadir_raw)
-            game_cleaned.to_csv(os.path.join(datadir_tidied, f"{game_id}.csv"))
+        for game_id in game_ids:
+            game_cleaned = get_events_information(game_id, data_dir=args.raw_datadir)
+            if game_cleaned is not None:
+                game_cleaned.to_csv(os.path.join(args.clean_datadir, f"{game_id}.csv"))
