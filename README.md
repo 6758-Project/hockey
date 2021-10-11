@@ -19,7 +19,7 @@ The image can be found in [`./figures/nhl_rink.png`](./figures/nhl_rink.png).
 ## Installation
 
 To install this package, first setup your Python environment by following the instructions in the [Environment](#environments) section.
-Once you've setup your environment, you can install this package by running the following command from the root directory of your repository. 
+Once you've setup your environment, you can install this package by running the following command from the root directory of your repository.
 
     pip install -e .
 
@@ -42,7 +42,7 @@ Instructions are provided for both methods.
 
 **Note**: If you are having trouble rendering interactive plotly figures and you're using the pip + virtualenv method, try using Conda instead.
 
-### Conda 
+### Conda
 
 Conda uses the provided `environment.yml` file.
 You can ignore `requirements.txt` if you choose this method.
@@ -63,7 +63,7 @@ You should now be able to launch jupyter and see your conda environment:
 
 If you make updates to your conda `environment.yml`, you can use the update command to update your existing environment rather than creating a new one:
 
-    conda env update --file environment.yml    
+    conda env update --file environment.yml
 
 You can create a new environment file using the `create` command:
 
@@ -98,4 +98,45 @@ If you want to create a new `requirements.txt` file, you can use `pip freeze`:
     pip freeze > requirements.txt
 
 
+## NHL Project Tools
+This project also requires installation of the NHL Project Tools library.
 
+To install it in your conda environment, simply run `pip install nhl_api_tools/`
+in the project directory.
+
+
+## Downloading NHL data
+You can download the raw NHL data using python:
+
+    python src/data/download_data.py
+    
+which will download the data into `data/raw` directory.
+
+## Creating the tidy data
+    
+Then you can clean the data by running this script:
+
+    python src/data/tidy_data.py
+    
+which will clean the data in the `data/raw` directory into `csv` files containing the game events (currently only shots and goals) into `data/clean` directory.
+
+## Creating the shot map data
+
+You can create the data files required for the shot maps by running this script:
+
+    python src/data/team_data.py
+	
+This will read the tidy data in the `data/clean` directory and save the summarized data in the `data/games` directory.	
+Afterwards, the Jupyter notebook "shot_maps.ipynb" can be used to visualize the data.
+
+## Interactive visualization with Jupyter Lab
+To run `notebooks/shot_maps.ipynb` notebook with the interactive visualization of the shots you need to do the following:
+1. Install `jupyter-dash`: 
+    
+    pip install jupyter-dash
+    
+2. Install an extension for Jupyter Lab + dash (for more details visit [this tutorial](https://github.com/plotly/jupyter-dash)):
+    
+    jupyter lab build
+    
+To check that the extension is installed properly, call `jupyter labextension list`.
