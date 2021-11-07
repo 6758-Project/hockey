@@ -15,6 +15,8 @@ from nhl_proj_tools.data_utils import (
     generate_postseason_game_ids,
 )
 
+STANDARDIZED_GOAL_COORDINATES = (89, 0)
+
 
 def flip_coord_to_one_side(game_events_df, right_team, left_team):
     """
@@ -42,7 +44,21 @@ def flip_coord_to_one_side(game_events_df, right_team, left_team):
 
 
 def add_milestone2_metrics(events):
-    return events  # TODO
+    events['distance_from_net'] = \
+        ((STANDARDIZED_GOAL_COORDINATES[0] - events['coordinate_x'])**2 \
+          + (STANDARDIZED_GOAL_COORDINATES[1] - events['coordinate_y'])**2)**(.5)
+
+    events['angle'] = \
+        np.arcsin((events['coordinate_y'] / \
+                   events['distance_from_net'].replace(0, 999)).values
+        )  # assumes shots at distance=0 have angle 0
+
+    events['angle'] = (events['angle'] / (np.pi / 2)) * 90  # radians to degrees
+
+    events['is_goal'] = (events['type'] == 'GOAL')
+    events['is_empty_net'] = (events['is_empty_net'] == True)  # assumes NaN's are False
+
+    return events
 
 
 def parse_game_data(game_id: str, game_data: dict):
@@ -184,7 +200,6 @@ def parse_game_data(game_id: str, game_data: dict):
             .median()
             .reset_index()
         )
-        import pdb; pdb.set_trace()
         for idx, row in median_df.iterrows():
             if row["home_team"] == row["shooter_team_name"]:
                 if (
@@ -263,7 +278,7 @@ if __name__ == "__main__":
     else:
         os.makedirs(args.clean_datadir, exist_ok=True)
 
-    for season in range(2015, 2015+1): #, 2019+1):
+    for season in range(2015, 2019+1):
         game_ids = generate_regular_season_game_ids(
             season
         ) + generate_postseason_game_ids(season)
