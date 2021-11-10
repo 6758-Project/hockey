@@ -108,7 +108,6 @@ def parse_game_data(game_id: str, game_data: dict):
         event_goals_away = event_about_info["goals"]["away"]
 
         # shooting/scoring team information
-        # import pdb; pdb.set_trace()
         shooter_team_info = event.get("team", None)
         shooter_team_id = shooter_team_info.get("id", None) if shooter_team_info else None
         shooter_team_name = shooter_team_info.get("name", None) if shooter_team_info else None
@@ -190,10 +189,11 @@ def parse_game_data(game_id: str, game_data: dict):
 
     events_df = pd.DataFrame(events)
 
-    # calculate the median of the x_coordinate to see where did the teams start from (left or right)
+    # calculate the median of the SHOT x_coordinate to see where did the teams start from (left or right)
     if not events_df.empty:
         median_df = (
-            events_df[(events_df["period"] == 1)]
+            events_df[((events_df["period"] == 1) | (events_df["period"] == 3)) & \
+                      (events_df['type']=="SHOT") ]
             .groupby(["shooter_team_name", "home_team"])[
                 ["coordinate_x", "coordinate_y"]
             ]
