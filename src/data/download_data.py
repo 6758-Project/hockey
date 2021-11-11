@@ -50,6 +50,7 @@ def main(args):
         if not args.regular_season_only:
             requested_game_ids.extend(generate_postseason_game_ids(season))
 
+        logging.info(f"Downloading for {season} season...")
         download_games(requested_game_ids, args.datadir)
         logging.info(f"...{season} season successfully downloaded")
 
