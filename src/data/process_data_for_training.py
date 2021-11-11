@@ -14,10 +14,12 @@ def baseline_preprocess(nhl_plays):
     nhl_plays = nhl_plays[nhl_plays['type'].isin(['SHOT','GOAL'])]  # Piazza @219
 
     # losing irrelevant, misleading, and information-leaking (is_winning_goal) columns
-    nhl_plays = nhl_plays.drop(['id', 'home_team', 'away_team', 'type', 'code',
-                                'shooter_name', 'shooter_team_id', 'shooter_team_name',
-                                'strength_name', 'strength_code', 'is_winning_goal'],
-                               axis=1)
+    nhl_plays = nhl_plays.drop(
+        ['id', 'home_team', 'away_team', 'type', 'code',
+         'shooter_name', 'shooter_team_id', 'shooter_team_code', 'goalie_id',
+         'strength_name', 'strength_code', 'is_winning_goal'],
+        axis=1
+    )
     nhl_plays = nhl_plays.set_index(['game_id','event_index'])
 
     return nhl_plays

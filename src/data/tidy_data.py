@@ -88,11 +88,7 @@ def parse_game_data(game_id: str, game_data: dict):
 
         event_code = event_result_info.get("eventCode", None)
         event_desc = event_result_info.get("description", None)
-        # doesn't exist in other event types
-        if "secondaryType" in event_result_info.keys():
-            event_secondary_type = event_result_info.get("secondaryType", None)
-        else:
-            event_secondary_type = None
+        event_secondary_type = event_result_info.get("secondaryType", None)
 
         # event information
         event_about_info = event.get("about", None)
@@ -135,24 +131,18 @@ def parse_game_data(game_id: str, game_data: dict):
         game_winning_goal = None
         strength_name = None
         strength_code = None
-        if event_type_id == "GOAL":
-            if "emptyNet" in event_result_info.keys():
-                empty_net = event_result_info.get("emptyNet", None)
-            if "gameWinningGoal" in event_result_info.keys():
-                game_winning_goal = event_result_info.get("gameWinningGoal", None)
-            if "strength" in event_result_info.keys():
-                strength_name = event_result_info["strength"]["name"]
-                strength_code = event_result_info["strength"]["code"]
+        empty_net = event_result_info.get("emptyNet", None)
+        game_winning_goal = event_result_info.get("gameWinningGoal", None)
+        strength_name = event_result_info["strength"]["name"] \
+            if "strength" in event_result_info.keys() else None
+        strength_code = event_result_info["strength"]["code"] \
+            if "strength" in event_result_info.keys() else None
 
         # (x,y) coordinates of the event
         coord_info = event.get("coordinates", None)
 
-        coord_x, coord_y = None, None
-
-        if coord_info and "x" in coord_info.keys():
-            coord_x = coord_info["x"]
-        if coord_info and "y" in coord_info.keys():
-            coord_y = coord_info["y"]
+        coord_x = coord_info.get("x", None) if coord_info else None
+        coord_y = coord_info.get("y", None) if coord_info else None
 
         event_entry = {
             "id": event_id,
