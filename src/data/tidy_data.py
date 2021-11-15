@@ -95,7 +95,8 @@ def add_milestone2_advanced_metrics(events_df):
                 events_df.at[event_idx, 'distance_from_prev_event'] = dist_prev_event
                 
                 # 5. see if the current event is a rebound
-                if prev_event['type'] == 'SHOT' and row['type'] == 'SHOT':
+                if prev_event['type'] == 'SHOT' and row['type'] == 'SHOT'\
+            		and prev_event['shooter_team_name'] == row['shooter_team_name']:
                     events_df.at[event_idx, 'is_rebound'] = True
                     
                     # rebound angle is the change in angle between current and previous shot events = [0,180]
