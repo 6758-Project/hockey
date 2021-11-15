@@ -6,9 +6,12 @@ import glob
 import os
 import json
 import logging
+import math
 
 import numpy as np
 import pandas as pd
+
+from datetime import timedelta
 
 from nhl_proj_tools.data_utils import (
     generate_regular_season_game_ids,
@@ -41,6 +44,72 @@ def flip_coord_to_one_side(game_events_df, right_team, left_team):
             game_events_df.at[idx, "coordinate_x"] = row["coordinate_x"] * -1
             game_events_df.at[idx, "coordinate_y"] = row["coordinate_y"] * -1
     return game_events_df
+
+
+def add_milestone2_advanced_metrics(events_df):
+    """
+    Add advanced features related to the preceding event for each one
+    """
+    def seconder(x):
+        mins, secs = map(float, x.split(':'))
+        td = timedelta(minutes=mins, seconds=secs)
+        return td.total_seconds()
+
+    # 1. add the elapsed time since the game started
+    events_df['game_sec'] = events_df['time'].apply(seconder).astype(np.int64) + (events_df['period']-1) * 20 * 60
+
+
+    sign = lambda x: math.copysign(1, x)
+
+    events_df['prev_event_type'] = None
+    events_df['prev_event_time_diff'] = 0.0  # or -1
+    events_df['distance_from_prev_event'] = np.nan
+    events_df['is_rebound'] = False
+    events_df['rebound_angle'] = 0.0
+    events_df['speed'] = 0.0
+
+    for event_idx, row in events_df.iterrows():
+        
+        if event_idx != 0:
+            prev_event = events_df.iloc[event_idx-1] 
+            prev_event_type = prev_event['type']
+            
+            # 2. previous event type
+            events_df.at[event_idx, 'prev_event_type'] = prev_event_type
+            
+            # 3. time difference in seconds
+            events_df.at[event_idx, 'prev_event_time_diff'] = row['game_sec'] - prev_event['game_sec']
+            
+            # 4. angle between current and previous events
+            # make sure both events are in the same period, otherwise it doesn't make sense
+            if prev_event['period'] == row['period']:
+                
+                # if both events fall in a single quarter
+                if sign(row['angle']) == sign(prev_event['angle']):
+                    rad_angle_between = abs(row['angle'] - prev_event['angle']) * np.pi / 180
+                else: # both events in different quarters
+                    rad_angle_between = (abs(row['angle']) + abs(prev_event['angle'])) * np.pi / 180
+                a = row['distance_from_net']
+                b = prev_event['distance_from_net']
+                dist_prev_event = np.sqrt(a**2 + b**2 - 2*a*b*np.cos(rad_angle_between))
+                events_df.at[event_idx, 'distance_from_prev_event'] = dist_prev_event
+                
+                # 5. see if the current event is a rebound
+                if prev_event['type'] == 'SHOT' and row['type'] == 'SHOT':
+                    events_df.at[event_idx, 'is_rebound'] = True
+                    
+                    # rebound angle is the change in angle between current and previous shot events = [0,180]
+                    events_df.at[event_idx, 'rebound_angle'] = rad_angle_between * 180 / np.pi
+            
+            else:
+                events_df.at[event_idx, 'distance_from_prev_event'] = np.NaN
+
+    # 6. speed of the puck
+    mask = events_df['prev_event_time_diff'] > 0
+    events_df['speed'] = events_df[mask]['distance_from_prev_event'] /events_df[mask]['prev_event_time_diff']
+       
+
+    return events_df
 
 
 def add_milestone2_metrics(events):
@@ -200,6 +269,7 @@ def parse_game_data(game_id: str, game_data: dict):
                     events_df = flip_coord_to_one_side(events_df, away_team, home_team)
 
         events_df = add_milestone2_metrics(events_df)
+        events_df = add_milestone2_advanced_metrics(events_df)
 
     return events_df
 
