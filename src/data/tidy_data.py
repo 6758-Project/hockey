@@ -92,8 +92,8 @@ def add_milestone2_advanced_metrics(events_df):
     events_df.loc[~rebound_angle_mask, "rebound_angle"] = 0.0
 
     # 6. see if the current event is a rebound
-    events_df["is_rebound"] = False
-    events_df[rebound_angle_mask] = True
+    events_df['is_rebound'] = False
+    events_df.loc[rebound_angle_mask, 'is_rebound'] = True
 
     # 7. speed of the puck
     speed_mask = events_df["prev_event_time_diff"] > 0
@@ -102,7 +102,7 @@ def add_milestone2_advanced_metrics(events_df):
         / events_df[speed_mask]["prev_event_time_diff"]
     )
     events_df["speed"] = events_df["speed"].astype(float).round(4)
-    events_df.loc[np.isnan(events_df["speed"]), "speed"] = 0.0
+    events_df.loc[np.isnan(events_df["speed"]) | (events_df["period"] != prev_events_df["period"]), "speed"] = 0.0
 
     return events_df
 
