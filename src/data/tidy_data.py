@@ -6,9 +6,12 @@ import glob
 import os
 import json
 import logging
+import math
 
 import numpy as np
 import pandas as pd
+
+from datetime import timedelta
 
 from nhl_proj_tools.data_utils import (
     generate_regular_season_game_ids,
@@ -43,20 +46,81 @@ def flip_coord_to_one_side(game_events_df, right_team, left_team):
     return game_events_df
 
 
+def add_milestone2_advanced_metrics(events_df):
+    """
+    Add advanced features related to the preceding event for each one
+    """
+    # 1. elapsed time since the game started
+    tmp = events_df["time"].str.split(":", expand=True).astype(int)
+    events_df["game_sec"] = (events_df["period"] - 1) * 20 * 60 + tmp[0] * 60 + tmp[1]
+
+    # getting information about previous events using df.shift(periods=1)
+    prev_events_df = events_df.shift(periods=1)
+
+    # 2. previous event type
+    events_df["prev_event_type"] = prev_events_df["type"]
+
+    # 3. time difference in seconds
+    events_df["prev_event_time_diff"] = (
+        events_df["game_sec"] - prev_events_df["game_sec"]
+    )
+
+    # 4. distance between current and previous event
+    # first we calcualte the angle between the current and previous events (in degrees)
+    events_df["angle_between_prev_event"] = (
+        (events_df["angle"] - prev_events_df["angle"]).abs().astype(float).round(4)
+    )
+    a = events_df["distance_from_net"]
+    b = prev_events_df["distance_from_net"]
+    # then with the knowledge of the two sides of a triangle and its angle, we can get the third side length
+    events_df["distance_from_prev_event"] = np.sqrt(
+        a ** 2
+        + b ** 2
+        - (2 * a * b * np.cos(events_df["angle_between_prev_event"] * np.pi / 180.0))
+    )
+    events_df["distance_from_prev_event"] = (
+        events_df["distance_from_prev_event"].astype(float).round(4)
+    )
+    # 5. rebound angle is the change in angle between current and previous shot events = [0,180]
+    rebound_angle_mask = (
+        (events_df["type"] == "SHOT")
+        & (events_df["prev_event_type"] == "SHOT")
+        & (events_df["shooter_team_name"] == prev_events_df["shooter_team_name"])
+        & (events_df["period"] == prev_events_df["period"])
+    )
+    events_df["rebound_angle"] = events_df["angle_between_prev_event"]
+    events_df.loc[~rebound_angle_mask, "rebound_angle"] = 0.0
+
+    # 6. see if the current event is a rebound
+    events_df['is_rebound'] = False
+    events_df.loc[rebound_angle_mask, 'is_rebound'] = True
+
+    # 7. speed of the puck
+    speed_mask = events_df["prev_event_time_diff"] > 0
+    events_df["speed"] = (
+        events_df[speed_mask]["distance_from_prev_event"]
+        / events_df[speed_mask]["prev_event_time_diff"]
+    )
+    events_df["speed"] = events_df["speed"].astype(float).round(4)
+    events_df.loc[np.isnan(events_df["speed"]) | (events_df["period"] != prev_events_df["period"]), "speed"] = 0.0
+
+    return events_df
+
+
 def add_milestone2_metrics(events):
-    events['distance_from_net'] = \
-        ((STANDARDIZED_GOAL_COORDINATES[0] - events['coordinate_x'])**2 \
-          + (STANDARDIZED_GOAL_COORDINATES[1] - events['coordinate_y'])**2)**(.5)
+    events["distance_from_net"] = (
+        (STANDARDIZED_GOAL_COORDINATES[0] - events["coordinate_x"]) ** 2
+        + (STANDARDIZED_GOAL_COORDINATES[1] - events["coordinate_y"]) ** 2
+    ) ** (0.5)
 
-    events['angle'] = \
-        np.arcsin((events['coordinate_y'] / \
-                   events['distance_from_net'].replace(0, 999)).values
-        )  # assumes shots at distance=0 have angle 0
+    events["angle"] = np.arcsin(
+        (events["coordinate_y"] / events["distance_from_net"].replace(0, 999)).values
+    )  # assumes shots at distance=0 have angle 0
 
-    events['angle'] = (events['angle'] / (np.pi / 2)) * 90  # radians to degrees
+    events["angle"] = (events["angle"] / (np.pi / 2)) * 90  # radians to degrees
 
-    events['is_goal'] = (events['type'] == 'GOAL')
-    events['is_empty_net'] = (events['is_empty_net'] == True)  # assumes NaN's are False
+    events["is_goal"] = events["type"] == "GOAL"
+    events["is_empty_net"] = events["is_empty_net"] == True  # assumes NaN's are False
 
     return events
 
@@ -105,9 +169,15 @@ def parse_game_data(game_id: str, game_data: dict):
 
         # shooting/scoring team information
         shooter_team_info = event.get("team", None)
-        shooter_team_id = shooter_team_info.get("id", None) if shooter_team_info else None
-        shooter_team_name = shooter_team_info.get("name", None) if shooter_team_info else None
-        shooter_team_code = shooter_team_info.get("triCode", None) if shooter_team_info else None
+        shooter_team_id = (
+            shooter_team_info.get("id", None) if shooter_team_info else None
+        )
+        shooter_team_name = (
+            shooter_team_info.get("name", None) if shooter_team_info else None
+        )
+        shooter_team_code = (
+            shooter_team_info.get("triCode", None) if shooter_team_info else None
+        )
 
         # players information (i.e. the shooter/scorer and the goalie)
         # Shooter/scorer information
@@ -133,10 +203,16 @@ def parse_game_data(game_id: str, game_data: dict):
         strength_code = None
         empty_net = event_result_info.get("emptyNet", None)
         game_winning_goal = event_result_info.get("gameWinningGoal", None)
-        strength_name = event_result_info["strength"]["name"] \
-            if "strength" in event_result_info.keys() else None
-        strength_code = event_result_info["strength"]["code"] \
-            if "strength" in event_result_info.keys() else None
+        strength_name = (
+            event_result_info["strength"]["name"]
+            if "strength" in event_result_info.keys()
+            else None
+        )
+        strength_code = (
+            event_result_info["strength"]["code"]
+            if "strength" in event_result_info.keys()
+            else None
+        )
 
         # (x,y) coordinates of the event
         coord_info = event.get("coordinates", None)
@@ -182,8 +258,10 @@ def parse_game_data(game_id: str, game_data: dict):
     # calculate the median of the SHOT x_coordinate to see where did the teams start from (left or right)
     if not events_df.empty:
         median_df = (
-            events_df[((events_df["period"] == 1) | (events_df["period"] == 3)) & \
-                      (events_df['type']=="SHOT") ]
+            events_df[
+                ((events_df["period"] == 1) | (events_df["period"] == 3))
+                & (events_df["type"] == "SHOT")
+            ]
             .groupby(["shooter_team_name", "home_team"])[
                 ["coordinate_x", "coordinate_y"]
             ]
@@ -200,6 +278,7 @@ def parse_game_data(game_id: str, game_data: dict):
                     events_df = flip_coord_to_one_side(events_df, away_team, home_team)
 
         events_df = add_milestone2_metrics(events_df)
+        events_df = add_milestone2_advanced_metrics(events_df)
 
     return events_df
 
@@ -262,13 +341,13 @@ if __name__ == "__main__":
 
     # empty cleaned datadir if exists; otherwise create it
     if os.path.exists(args.clean_datadir):
-        files = glob.glob(args.clean_datadir+"*")
+        files = glob.glob(args.clean_datadir + "*")
         for f in files:
             os.remove(f)
     else:
         os.makedirs(args.clean_datadir, exist_ok=True)
 
-    for season in range(2015, 2019+1):
+    for season in range(2015, 2019 + 1):
         game_ids = generate_regular_season_game_ids(
             season
         ) + generate_postseason_game_ids(season)
