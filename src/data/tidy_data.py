@@ -132,74 +132,39 @@ def add_milestone2_advanced_metrics(events_df):
 
             # Penalty is a doulbe minor penalty
             if (events_df.at[i,"penaltyMinutes"] == 4):
-
                 # Expected ending time of the double minor penalty
                 Guest_DM_exp_end = np.append(Guest_DM_exp_end,(events_df.at[i,"game_sec"] + (60*4)))
 
-                # If the home team is not on a power play already, start the power play
-                if (HomeTeamPowerPlayFlag == 0):
-                    Home_power_startstamp = events_df.at[i,"game_sec"]
-                    HomeTeamPowerPlayFlag = 1
-
             # Penalty is a major penalty
             elif (events_df.at[i,"penaltyMinutes"] == 5):
-
                 # Expected ending time of the major penalty
                 Guest_major_exp_end = np.append(Guest_major_exp_end,(events_df.at[i,"game_sec"] + (60*5)))
 
-                # If the home team is not on a power play already, start the power play
-                if (HomeTeamPowerPlayFlag == 0):
-                    Home_power_startstamp = events_df.at[i,"game_sec"]
-                    HomeTeamPowerPlayFlag = 1
-
             # Penalty is a minor penalty
             elif (events_df.at[i,"penaltyMinutes"] == 2):
-
                 # Expected ending time of the minor penalty      
                 Guest_minor_exp_end = np.append(Guest_minor_exp_end,(events_df.at[i,"game_sec"] + (60*2)))
-
-                # If the home team is not on a power play already, start the power play
-                if (HomeTeamPowerPlayFlag == 0):
-                    Home_power_startstamp = events_df.at[i,"game_sec"]
-                    HomeTeamPowerPlayFlag = 1            
+           
          
         # Home team got a penalty, guest team powerplay   
         elif (events_df.at[i,"type"]=="PENALTY") and (events_df.at[i,"shooter_team_name"]==events_df.at[i,"home_team"]):
             
             # Penalty is a doulbe minor penalty
             if (events_df.at[i,"penaltyMinutes"] == 4):
-
                 # Expected ending time of the double minor penalty
                 Home_DM_exp_end = np.append(Home_DM_exp_end,(events_df.at[i,"game_sec"] + (60*4)))
 
-                # If the home team is not on a power play already, start the power play
-                if (GuestTeamPowerPlayFlag == 0):
-                    Guest_power_startstamp = events_df.at[i,"game_sec"]
-                    GuestTeamPowerPlayFlag = 1
-
             # Penalty is a major penalty
             elif (events_df.at[i,"penaltyMinutes"] == 5):
-
                 # Expected ending time of the major penalty           
                 Home_major_exp_end = np.append(Home_major_exp_end,(events_df.at[i,"game_sec"] + (60*5)))
 
-                # If the home team is not on a power play already, start the power play
-                if (GuestTeamPowerPlayFlag == 0):
-                    Guest_power_startstamp = events_df.at[i,"game_sec"]
-                    GuestTeamPowerPlayFlag = 1
-
             # Penalty is a minor penalty
             elif (events_df.at[i,"penaltyMinutes"] == 2):
-
                 # Expected ending time of the minor penalty       
                 Home_minor_exp_end = np.append(Home_minor_exp_end,(events_df.at[i,"game_sec"] + (60*2)))
-
-                # If the home team is not on a power play already, start the power play
-                if (GuestTeamPowerPlayFlag == 0):
-                    Guest_power_startstamp = events_df.at[i,"game_sec"]
-                    GuestTeamPowerPlayFlag = 1         
-
-                    
+         
+       
         # Update penalty timer, remove expired ones
         Home_minor_exp_end = Home_minor_exp_end[Home_minor_exp_end > events_df.at[i,"game_sec"]]
         Home_DM_exp_end = Home_DM_exp_end[Home_DM_exp_end > events_df.at[i,"game_sec"]]
@@ -216,7 +181,8 @@ def add_milestone2_advanced_metrics(events_df):
         if (Guest_minor_exp_end.size == 0) and (Guest_DM_exp_end.size == 0) and (Guest_major_exp_end.size == 0):
             HomeTeamPowerPlayFlag = 0
             Home_power_startstamp = events_df.at[i,"game_sec"]
-                                  
+                
+                
         # Goal occured  
         elif (events_df.at[i,"type"]=="Goal"):
 
@@ -238,6 +204,7 @@ def add_milestone2_advanced_metrics(events_df):
                 HomeTeamPowerPlayFlag = 0
                 Home_power_startstamp = events_df.at[i,"game_sec"]
 
+                
         # Normal event
         else:
             # Update penalty timer, remove expired ones
@@ -249,18 +216,7 @@ def add_milestone2_advanced_metrics(events_df):
             Guest_DM_exp_end = Guest_DM_exp_end[Guest_DM_exp_end > events_df.at[i,"game_sec"]]
             Guest_major_exp_end = Guest_major_exp_end[Guest_major_exp_end > events_df.at[i,"game_sec"]]   
 
-            # If no more timer, reset flag and reset power play timer, else, update power play timer
-            if (Home_minor_exp_end.size == 0) and (Home_DM_exp_end.size == 0) and (Home_major_exp_end.size == 0):
-                GuestTeamPowerPlayFlag = 0
-                Guest_power_startstamp = events_df.at[i,"game_sec"]
-            if (Guest_minor_exp_end.size == 0) and (Guest_DM_exp_end.size == 0) and (Guest_major_exp_end.size == 0):
-                HomeTeamPowerPlayFlag = 0
-                Home_power_startstamp = events_df.at[i,"game_sec"]
-
-        # Update the power play timer
-        events_df.at[i,"PowerPlayTimerHome"] = events_df.at[i,"game_sec"] - Home_power_startstamp
-        events_df.at[i,"PowerPlayTimerGuest"] = events_df.at[i,"game_sec"] - Guest_power_startstamp
-
+            
         # Update skater number
         # 9. Number of friendly non-goalie skaters
         if (Home_minor_exp_end.size + Home_DM_exp_end.size + Home_major_exp_end.size) > 2:
@@ -274,6 +230,27 @@ def add_milestone2_advanced_metrics(events_df):
         else:
             events_df.at[i,'Guest_Skaters'] = 5 - (Guest_minor_exp_end.size + Guest_DM_exp_end.size + Guest_major_exp_end.size)
 
+
+        # Update the power play timer
+        # If the guest team has a player advantage, start the power play 
+        if (events_df.at[i,'Home_Skaters'] > events_df.at[i,'Guest_Skaters']) and (HomeTeamPowerPlayFlag == 0):
+            Home_power_startstamp = events_df.at[i,"game_sec"]
+            HomeTeamPowerPlayFlag = 1
+        elif ((events_df.at[i,'Home_Skaters'] <= events_df.at[i,'Guest_Skaters'])):   
+            Home_power_startstamp = events_df.at[i,"game_sec"]
+            HomeTeamPowerPlayFlag = 0
+        
+        # If the home team has a player advantage, start the power play   
+        if (events_df.at[i,'Guest_Skaters'] > events_df.at[i,'Home_Skaters']) and (GuestTeamPowerPlayFlag == 0):
+            Guest_power_startstamp = events_df.at[i,"game_sec"]
+            GuestTeamPowerPlayFlag = 1
+        elif ((events_df.at[i,'Guest_Skaters'] <= events_df.at[i,'Home_Skaters'])):  
+            Guest_power_startstamp = events_df.at[i,"game_sec"]
+            GuestTeamPowerPlayFlag = 0
+                  
+        events_df.at[i,"PowerPlayTimerHome"] = events_df.at[i,"game_sec"] - Home_power_startstamp
+        events_df.at[i,"PowerPlayTimerGuest"] = events_df.at[i,"game_sec"] - Guest_power_startstamp   
+        
     return events_df
 
 
