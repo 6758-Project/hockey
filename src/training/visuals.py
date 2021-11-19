@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 import os
+from typing import List
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,36 +13,59 @@ plt.style.use('ggplot')
 
 
 def generate_shot_classifier_charts(
-    y_true: Sequence[int], y_pred: Sequence[float], y_proba: Sequence[float],
-    model_id: str, image_dir: os.PathLike ="./"):
-    """Generates four core classifier performance visualizations given labels, predictions, and probabilities.
+    y_trues: List[Sequence[int]], y_preds: List[Sequence[int]], y_probas: List[Sequence[float]],
+    exp_names: List[str], title='', image_dir: os.PathLike ="./"):
+    """Generates four core classifier performance visualizations.
+
+    Assumes given lists of labels, predictions, and probabilities for a set of models.
+
+    Args:
+        y_trues: a list of vectors of labels
+        y_preds: a list of vectors of predictions
+        y_probas: a list of vectors of model-estimated probabilities
+        exp_names: a list of experiment names to be used as labels
+        title: the title of the chart set (optional)
+        image_dir: where the chart image should be written
 
     Submethods assume classifier application is NHL goal prediction.
     """
     if not os.path.exists(image_dir):
         os.makedirs(image_dir)
 
-    fig, ax = roc_auc_curve(y_true, y_proba, label=model_id)
-    fig.savefig(os.path.join(image_dir, f'{model_id}_roc_curve.png'), bbox_inches='tight')
-    plt.close()
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(15,15))
 
-    fig, ax = true_positive_rate_curve(y_true, y_proba, label=model_id)
-    fig.savefig(os.path.join(image_dir, f'{model_id}_positive_rate.png'), bbox_inches='tight')
-    plt.close()
+    M = len(exp_names)
+    for i in range(M):
+        ax = roc_auc_curve(
+            y_trues[i], y_probas[i], label=exp_names[i],
+            include_baseline=(i==0), ax=axes[0,0]
+        )
+        ax.set_title("ROC")
 
-    fig, ax = positive_proportion_curve(y_true, y_proba, label=model_id)
-    fig.savefig(os.path.join(image_dir, f'{model_id}_positive_prop.png'), bbox_inches='tight')
-    plt.close()
+        ax = reliability_curve(
+            y_trues[i], y_probas[i], label=exp_names[i],
+            ax=axes[0,1], n_bins=(len(y_trues[i])//300), strategy='quantile', lw=1
+        )
+        ax.set_title("Reliability")
 
-    fig, ax = reliability_curve(y_true, y_proba, label=model_id,
-                                n_bins=(len(y_true)//300), strategy='quantile')
-    fig.savefig(os.path.join(image_dir, f'{model_id}_reliability.png'), bbox_inches='tight')
-    plt.close()
+        ax = true_positive_rate_curve(
+            y_trues[i], y_probas[i], label=exp_names[i], ax=axes[1,0]
+        )
+        ax.set_title("True Positive Rate by Percentile")
+
+        ax = positive_proportion_curve(
+            y_trues[i], y_probas[i], label=exp_names[i], ax=axes[1,1]
+        )
+        ax.set_title("Positive Proportion by Percentile")
+
+    fig.suptitle(title, fontsize=16)
+    fig.tight_layout()
+    fig.savefig(os.path.join(image_dir, f'{title}.png'), bbox_inches='tight')
 
 
 def roc_auc_curve(
     y_true: Sequence[int], y_proba: Sequence[float],
-    label: str = "provided", include_baseline: bool = True):
+    label: str = "provided", include_baseline: bool = True, ax=None):
     """ Generates a ROC Curve for a pair of label and predicted probability vectors
 
     Args:
@@ -50,35 +74,35 @@ def roc_auc_curve(
         label: the identifier associated with the predictions
         include_baseline: If True, plots metrics for a baseline classifier
             which predicts 50% probability for each observation
+        ax: a Matplotlib Axes object (optional)
 
     Returns:
-        fig: current Matplotlib figure
         ax: current Matplotlib axes
     """
     fpr, tpr, thresholds = metrics.roc_curve(y_true, y_proba)
     auc = metrics.auc(fpr, tpr)
 
-    plt.figure()
-    plt.plot(fpr, tpr, lw=2, label=label)
+    ax = plt.gca() if ax is None else ax
+    ax.plot(fpr, tpr, lw=2, label=label + f" (AUC={round(auc, 4)})")
 
     if include_baseline:
         baseline_proba = np.ones_like(y_proba) * .5
         fpr, tpr, thresholds = metrics.roc_curve(y_true, baseline_proba)
 
-        plt.plot(tpr, tpr, lw=2, linestyle="--", label="baseline")
+        ax.plot(tpr, tpr, lw=2, linestyle="--", label="baseline")
 
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel("False Positive Rate")
-    plt.ylabel("True Positive Rate")
-    plt.title(f"ROC curve: AUC={round(auc, 4)}")
-    plt.legend(loc="lower right")
+    ax.set_xlim([0.0, 1.0])
+    ax.set_ylim([0.0, 1.05])
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate")
+    ax.legend(loc="lower right")
 
-    return plt.gcf(), plt.gca()
+    return ax
 
 
 def true_positive_rate_curve(
-    y_true: Sequence[int], y_proba: Sequence[float], label: str = "provided"):
+    y_true: Sequence[int], y_proba: Sequence[float], label: str = "provided",
+    ax=None):
     """ Generates a positive rate curve for a pair of label and estimated probability vectors.
 
     A true positive rate curve plots the proportion of positives as a function of estimated
@@ -93,8 +117,9 @@ def true_positive_rate_curve(
         y_true: a vector of labels
         y_proba: a vector of probabilities
         label: the identifier associated with the predictions
+        ax: a Matplotlib Axes object (optional)
+
     Returns:
-        fig: current Matplotlib figure
         ax: current Matplotlib axes
     """
 
@@ -106,21 +131,23 @@ def true_positive_rate_curve(
     row_num = np.arange(1, len(df)+1)
     df['positive_rate'] = run_sum / row_num
 
-    ax = df.plot.line(x='percentile', y='positive_rate', label=label)
+    df = df[df['percentile'] <= 97.5]  # trim extremes before plotting
+
+    ax = plt.gca() if ax is None else ax
+    ax = df.plot.line(x='percentile', y='positive_rate', label=label, ax=ax)
     l, r = ax.get_xlim()
     ax.set_xlim(r, l)  # inverts percentile curves
 
-    fig = plt.gcf()
-    plt.xlabel("Estimated Probability Percentile")
-    plt.ylabel("True Positive Rate")
-    plt.title(f"True Positive Rate by Percentile: {label}")
-    plt.legend(loc="upper right")
+    ax.set_xlabel("Estimated Probability Percentile")
+    ax.set_ylabel("True Positive Rate")
+    ax.legend(loc="upper right")
 
-    return fig, ax
+    return ax
 
 
 def positive_proportion_curve(
-    y_true: Sequence[int], y_proba: Sequence[float], label: str = "provided"):
+    y_true: Sequence[int], y_proba: Sequence[float], label: str = "provided",
+    ax=None):
     """ Generates a positive proportion curve for a pair of label and estimated probability vectors.
 
     A positive distribution curve plots the proportion of population positives as a function of estimated probability percentiles.
@@ -134,8 +161,9 @@ def positive_proportion_curve(
         y_true: a vector of labels
         y_proba: a vector of probabilities
         label: the identifier associated with the predictions
+        ax: a Matplotlib Axes object (optional)
+
     Returns:
-        fig: current Matplotlib figure
         ax: current Matplotlib axes
     """
     df = pd.DataFrame({"y_true": y_true, "y_proba": y_proba})
@@ -145,21 +173,21 @@ def positive_proportion_curve(
     run_sum = df['y_true'].cumsum()
     df['positive_proportion'] = run_sum / df['y_true'].sum()
 
-    ax = df.plot.line(x='percentile', y='positive_proportion', label=label)
+    ax = plt.gca() if ax is None else ax
+    ax = df.plot.line(x='percentile', y='positive_proportion', label=label, ax=ax)
     l, r = ax.get_xlim()
     ax.set_xlim(r, l)  # inverts percentile curves
 
-    fig = plt.gcf()
-    plt.xlabel("Estimated Probability Percentile")
-    plt.ylabel("Cumulative Positive Proportion")
-    plt.title(f"Positive Proportion: {label}")
-    plt.legend(loc="lower right")
+    ax.set_xlabel("Estimated Probability Percentile")
+    ax.set_ylabel("Cumulative Positive Proportion")
+    ax.legend(loc="lower right")
 
-    return fig, ax
+    return ax
 
 
 def reliability_curve(
-    y_true: Sequence[int], y_proba: Sequence[float], label: str = "provided", **kwargs: dict):
+    y_true: Sequence[int], y_proba: Sequence[float], label: str = "provided",
+    ax=None, **kwargs: dict):
     """ Generates a reliability curve for a pair of label and estimated probability vectors.
 
     See scikit learn's CalibrationDisplay for more:
@@ -169,15 +197,16 @@ def reliability_curve(
         y_true: a vector of labels
         y_proba: a vector of probabilities
         label: the identifier associated with the predictions
+        ax: a Matplotlib Axes object (optional)
         kwargs: passed to sklearn's CalibrationDisplay
 
     Returns:
-        fig: current Matplotlib figure
         ax: current Matplotlib axes
     """
-    cd = CalibrationDisplay.from_predictions(y_true, y_proba, name=label, **kwargs)
+    ax = plt.gca() if ax is None else ax
+    cd = CalibrationDisplay.from_predictions(y_true, y_proba, name=label, ax=ax, **kwargs)
 
     fig = plt.gcf()
     plt.title(f"Reliability Curve: {label}")
 
-    return cd.figure_, cd.ax_
+    return cd.ax_

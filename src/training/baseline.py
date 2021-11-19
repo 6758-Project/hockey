@@ -1,4 +1,7 @@
 import argparse
+import logging
+import warnings
+logging.basicConfig(level = logging.INFO)
 
 import pandas as pd
 
@@ -19,87 +22,126 @@ LABEL_COL = 'is_goal'
 
 RANDOM_STATE = 1729
 
+EXP_KWARGS = {
+    'project_name': 'ift6758-hockey',
+    'workspace': "tim-k-lee",
+    'auto_param_logging': False
+}
+
+EXP_PARAMS = {
+    "random_state": RANDOM_STATE,
+    "model_type": "logreg",
+    "scaler": "standard",
+}
+
 
 def load_train_and_validation():
     train = pd.read_csv("./data/processed/train_processed.csv")
     val = pd.read_csv("./data/processed/validation_processed.csv")
 
     na_mask = train[TRAIN_COLS_BASIC+[LABEL_COL]].isnull().any(axis=1)
-    print(f"dropping {na_mask.sum()} rows (of {len(train)} total) containing nulls from train")
+    logging.info(f"dropping {na_mask.sum()} rows (of {len(train)} total) containing nulls from train")
     train = train[~na_mask]
 
     na_mask = val[TRAIN_COLS_BASIC+[LABEL_COL]].isnull().any(axis=1)
-    print(f"dropping {na_mask.sum()} rows (of {len(val)} total) containing nulls from val")
+    logging.info(f"dropping {na_mask.sum()} rows (of {len(val)} total) containing nulls from val")
     val = val[~na_mask]
 
-    X_train = train[TRAIN_COLS_BASIC].values
+    X_train = train[TRAIN_COLS_BASIC]
     Y_train = train[LABEL_COL].astype(int)
 
-    X_val = val[TRAIN_COLS_BASIC].values
+    X_val = val[TRAIN_COLS_BASIC]
     Y_val = val[LABEL_COL].astype(int)
 
     return X_train, Y_train, X_val, Y_val
 
 
-def analyse_model_performance(y_true, y_pred, y_proba, X_train, experiment=None, generate_charts=True):
-    acc = sklearn.metrics.accuracy_score(y_true, y_pred)
-    cm = sklearn.metrics.confusion_matrix(y_true, y_pred)
-    f1 = sklearn.metrics.f1_score(y_true, y_pred)
-    precision = sklearn.metrics.precision_score(y_true, y_pred)
-    recall = sklearn.metrics.recall_score(y_true, y_pred)
+def preprocess(X_train, X_val):
+    scaler = sklearn.preprocessing.StandardScaler().fit(X_train.values)
 
-    print("Accuracy is {:6.3f}".format(acc))
-    print(f"Confusion Matrix:\n {cm}")
+    X_train_scaled = pd.DataFrame(
+        data=scaler.transform(X_train.values),
+        index=X_train.index,
+        columns=X_train.columns
+    )
 
-    print("F1 score is {:6.3f}".format(f1))
-    print("Precision score is {:6.3f}".format(precision))
-    print("Recall score is {:6.3f}".format(recall))
+    X_val_scaled = pd.DataFrame(
+        data=scaler.transform(X_val.values),
+        index=X_val.index,
+        columns=X_val.columns
+    )
 
-    if experiment:
-        params={
-            "random_state": RANDOM_STATE,
-            "model_type": "logreg",
-            "scaler": "standard",
-        }
+    return X_train_scaled, X_val_scaled
 
-        metrics = {
-            "acc": acc,
-            "f1": f1,
-            "recall": recall,
-            "precision": precision
-        }
 
-        experiment.log_dataset_hash(X_train)
-        experiment.log_parameters(params)
-        experiment.log_metrics(metrics)
+def clf_performance_metrics(y_true, y_pred, y_proba, verbose=False):
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', sklearn.exceptions.UndefinedMetricWarning)
+        acc = sklearn.metrics.accuracy_score(y_true, y_pred)
+        f1 = sklearn.metrics.f1_score(y_true, y_pred)
+        precision = sklearn.metrics.precision_score(y_true, y_pred)
+        recall = sklearn.metrics.recall_score(y_true, y_pred)
 
-    if generate_charts:
-        model_id = experiment.get_name() if experiment else "baseline_log_reg"
-        image_dir = "./src/training/visualizations/" + model_id+"/"
-        generate_shot_classifier_charts(
-            y_true, y_pred, y_proba,
-            model_id=model_id, image_dir=image_dir
-        )
+    if verbose:
+        logging.info("Accuracy is {:6.3f}".format(acc))
+        cm = sklearn.metrics.confusion_matrix(y_true, y_pred)
+        logging.info(f"Confusion Matrix:\n {cm}")
+
+        logging.info("F1 score is {:6.3f}".format(f1))
+        logging.info("Precision score is {:6.3f}".format(precision))
+        logging.info("Recall score is {:6.3f}".format(recall))
+
+    res = {
+        'accuracy': acc, 'f1_score': f1, 'precision': precision, 'recall': recall
+    }
+
+    return res
+
+
+def log_experiment(params, perf_metrics, X_train, exp_name=None):
+    comet_exp = Experiment(**EXP_KWARGS)
+
+    comet_exp.log_parameters(params)
+    comet_exp.log_metrics(perf_metrics)
+    comet_exp.log_dataset_hash(X_train)
+
+    if exp_name:
+        comet_exp.set_name(exp_name)
 
 
 def main(args):
-    comet_exp = Experiment(
-        project_name='ift6758-hockey', workspace="tim-k-lee", auto_param_logging=False
-    ) if args.log_results else None
-
     X_train, Y_train, X_val, Y_val = load_train_and_validation()
+    X_train, X_val = preprocess(X_train, X_val)
 
-    scaler = sklearn.preprocessing.StandardScaler().fit(X_train)
-    X_train = scaler.transform(X_train)
-    X_val = scaler.transform(X_val)
+    y_trues, y_preds, y_probas = [], [], []
+    exp_names = ['baseline_logreg_'+sub for sub in ['distance_only', 'angle_only', 'distance_and_angle']]
+    col_subsets = [['distance_from_net'], ['angle'], ['distance_from_net', 'angle']]
+    for exp_name, subset in zip(exp_names, col_subsets):
+        logging.info(f"Processing {exp_name}...")
+        X_train_sub = X_train[subset].values
+        X_val_sub = X_val[subset].values
 
-    clf = LogisticRegression()
-    clf.fit(X_train, Y_train)
+        clf = LogisticRegression(random_state=RANDOM_STATE).fit(X_train_sub, Y_train)
+        y_pred = clf.predict(X_val_sub)
+        y_proba = clf.predict_proba(X_val_sub)[:,1]
 
-    Y_val_pred = clf.predict(X_val)
-    Y_val_proba = clf.predict_proba(X_val)[:,1]
+        y_trues.append(Y_val)
+        y_preds.append(y_pred)
+        y_probas.append(y_proba)
 
-    analyse_model_performance(Y_val, Y_val_pred, Y_val_proba, X_train, comet_exp, args.generate_charts)
+        perf_metrics = clf_performance_metrics(Y_val, y_pred, y_proba, verbose=True)
+
+        if args.log_results:
+            log_experiment(EXP_PARAMS, perf_metrics, X_train_sub, exp_name=exp_name)
+
+    if args.generate_charts:
+        title = "Visual Summary - Simple Logistic Regressions"
+        image_dir = "./src/training/visualizations/simple_log_reg/"
+
+        generate_shot_classifier_charts(
+            y_trues, y_preds, y_probas, exp_names,
+            title=title, image_dir=image_dir
+        )
 
 
 
