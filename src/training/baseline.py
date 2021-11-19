@@ -41,7 +41,7 @@ def load_train_and_validation():
     return X_train, Y_train, X_val, Y_val
 
 
-def analyse_model_performance(y_true, y_pred, y_proba, experiment=None, generate_charts=True):
+def analyse_model_performance(y_true, y_pred, y_proba, X_train, experiment=None, generate_charts=True):
     acc = sklearn.metrics.accuracy_score(y_true, y_pred)
     cm = sklearn.metrics.confusion_matrix(y_true, y_pred)
     f1 = sklearn.metrics.f1_score(y_true, y_pred)
@@ -83,7 +83,9 @@ def analyse_model_performance(y_true, y_pred, y_proba, experiment=None, generate
 
 
 def main(args):
-    comet_exp = Experiment(project_name='ift-6758-milestone-2', auto_param_logging=False) if args.log_results else None
+    comet_exp = Experiment(
+        project_name='ift6758-hockey', workspace="tim-k-lee", auto_param_logging=False
+    ) if args.log_results else None
 
     X_train, Y_train, X_val, Y_val = load_train_and_validation()
 
@@ -97,7 +99,7 @@ def main(args):
     Y_val_pred = clf.predict(X_val)
     Y_val_proba = clf.predict_proba(X_val)[:,1]
 
-    analyse_model_performance(Y_val, Y_val_pred, Y_val_proba, comet_exp, args.generate_charts)
+    analyse_model_performance(Y_val, Y_val_pred, Y_val_proba, X_train, comet_exp, args.generate_charts)
 
 
 
