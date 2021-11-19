@@ -8,6 +8,8 @@ import pandas as pd
 from sklearn import metrics
 from sklearn.calibration import CalibrationDisplay
 
+plt.style.use('ggplot')
+
 
 def generate_shot_classifier_charts(
     y_true: Sequence[int], y_pred: Sequence[float], y_proba: Sequence[float],
@@ -97,21 +99,22 @@ def true_positive_rate_curve(
     """
 
     df = pd.DataFrame({"y_true": y_true, "y_proba": y_proba})
-    df = df.sort_values("y_proba", ascending=True)
-    df['percentile'] = df['y_proba'].rank(pct=True)
+    df['percentile'] = df['y_proba'].rank(pct=True) * 100
+    df = df.sort_values("y_proba", ascending=False)
 
     run_sum = df['y_true'].cumsum()
     row_num = np.arange(1, len(df)+1)
     df['positive_rate'] = run_sum / row_num
 
     ax = df.plot.line(x='percentile', y='positive_rate', label=label)
-    fig = plt.gcf()
+    l, r = ax.get_xlim()
+    ax.set_xlim(r, l)  # inverts percentile curves
 
-    plt.xlim([0.0, 1.0])
+    fig = plt.gcf()
     plt.xlabel("Estimated Probability Percentile")
     plt.ylabel("True Positive Rate")
-    plt.title(f"Percentile Positive Rate: {label}")
-    plt.legend(loc="lower right")
+    plt.title(f"True Positive Rate by Percentile: {label}")
+    plt.legend(loc="upper right")
 
     return fig, ax
 
@@ -136,16 +139,17 @@ def positive_proportion_curve(
         ax: current Matplotlib axes
     """
     df = pd.DataFrame({"y_true": y_true, "y_proba": y_proba})
-    df = df.sort_values("y_proba", ascending=True)
-    df['percentile'] = df['y_proba'].rank(pct=True)
+    df['percentile'] = df['y_proba'].rank(pct=True) * 100
+    df = df.sort_values("y_proba", ascending=False)
 
     run_sum = df['y_true'].cumsum()
     df['positive_proportion'] = run_sum / df['y_true'].sum()
 
     ax = df.plot.line(x='percentile', y='positive_proportion', label=label)
-    fig = plt.gcf()
+    l, r = ax.get_xlim()
+    ax.set_xlim(r, l)  # inverts percentile curves
 
-    plt.xlim([0.0, 1.0])
+    fig = plt.gcf()
     plt.xlabel("Estimated Probability Percentile")
     plt.ylabel("Cumulative Positive Proportion")
     plt.title(f"Positive Proportion: {label}")
