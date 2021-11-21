@@ -163,9 +163,34 @@ def add_milestone2_advanced_metrics(events_df):
             elif (events_df.at[i,"penaltyMinutes"] == 2):
                 # Expected ending time of the minor penalty       
                 Home_minor_exp_end = np.append(Home_minor_exp_end,(events_df.at[i,"game_sec"] + (60*2)))
-         
-       
-        # Update penalty timer, remove expired ones
+                              
+                
+        # Goal occured, if guest team scored, clear home team penalty
+        elif (events_df.at[i,"type"]=="GOAL") and (events_df.at[i,"shooter_team_name"]==events_df.at[i,"away_team"]):
+
+            # Detele the first minor penalty timer
+            if Home_minor_exp_end.size != 0:
+                Home_minor_exp_end = np.delete(Home_minor_exp_end,0)
+            
+            # Reset the double minor penalty timer, remove 1 minor penalty and start the next one
+            Home_DM_exp_end = Home_DM_exp_end[Home_DM_exp_end > (2*60) ]
+            if Home_DM_exp_end.size != 0:
+                Home_DM_exp_end[:] = (2*60) + events_df.at[i,"game_sec"]
+        
+        # Goal occured, if home team scored, clear guest team penalty
+        elif (events_df.at[i,"type"]=="GOAL") and (events_df.at[i,"shooter_team_name"]==events_df.at[i,"home_team"]):    
+            
+            # Detele the first minor penalty timer
+            if Guest_minor_exp_end.size != 0:
+                Guest_minor_exp_end = np.delete(Guest_minor_exp_end,0)
+                
+            # Reset the double minor penalty timer, remove 1 minor penalty and start the next one
+            Guest_DM_exp_end = Guest_DM_exp_end[Guest_DM_exp_end > (2*60) ]
+            if Guest_DM_exp_end.size != 0:
+                Guest_DM_exp_end[:] = (2*60) + events_df.at[i,"game_sec"]
+        
+        
+        # Always update penalty timer, remove expired ones
         Home_minor_exp_end = Home_minor_exp_end[Home_minor_exp_end > events_df.at[i,"game_sec"]]
         Home_DM_exp_end = Home_DM_exp_end[Home_DM_exp_end > events_df.at[i,"game_sec"]]
         Home_major_exp_end = Home_major_exp_end[Home_major_exp_end > events_df.at[i,"game_sec"]]
@@ -173,49 +198,7 @@ def add_milestone2_advanced_metrics(events_df):
         Guest_minor_exp_end = Guest_minor_exp_end[Guest_minor_exp_end > events_df.at[i,"game_sec"]]
         Guest_DM_exp_end = Guest_DM_exp_end[Guest_DM_exp_end > events_df.at[i,"game_sec"]]
         Guest_major_exp_end = Guest_major_exp_end[Guest_major_exp_end > events_df.at[i,"game_sec"]]   
-
-        # If no more timer, reset flag and reset power play timer, else, update power play timer
-        if (Home_minor_exp_end.size == 0) and (Home_DM_exp_end.size == 0) and (Home_major_exp_end.size == 0):
-            GuestTeamPowerPlayFlag = 0
-            Guest_power_startstamp = events_df.at[i,"game_sec"]
-        if (Guest_minor_exp_end.size == 0) and (Guest_DM_exp_end.size == 0) and (Guest_major_exp_end.size == 0):
-            HomeTeamPowerPlayFlag = 0
-            Home_power_startstamp = events_df.at[i,"game_sec"]
-                
-                
-        # Goal occured  
-        elif (events_df.at[i,"type"]=="Goal"):
-
-            # Reset the minor penalty timer
-            Home_minor_exp_end = np.empty(0)
-            Guest_minor_exp_end = np.empty(0)
-
-            # Reset the double minor penalty timer, remove 1 minor penalty and start the next one
-            Home_DM_exp_end = Home_DM_exp_end[Home_DM_exp_end > (2*60) ]
-            Home_DM_exp_end[:] = (2*60) + events_df.at[i,"game_sec"]
-            Guest_DM_exp_end = Guest_DM_exp_end[Guest_DM_exp_end > (2*60) ]
-            Guest_DM_exp_end[:] = (2*60) + events_df.at[i,"game_sec"]
-
-            # If no more timer, reset flag and reset power play timer, else, update power play timer
-            if (Home_minor_exp_end.size == 0) and (Home_DM_exp_end.size == 0) and (Home_major_exp_end.size == 0):
-                GuestTeamPowerPlayFlag = 0
-                Guest_power_startstamp = events_df.at[i,"game_sec"]
-            if (Guest_minor_exp_end.size == 0) and (Guest_DM_exp_end.size == 0) and (Guest_major_exp_end.size == 0):
-                HomeTeamPowerPlayFlag = 0
-                Home_power_startstamp = events_df.at[i,"game_sec"]
-
-                
-        # Normal event
-        else:
-            # Update penalty timer, remove expired ones
-            Home_minor_exp_end = Home_minor_exp_end[Home_minor_exp_end > events_df.at[i,"game_sec"]]
-            Home_DM_exp_end = Home_DM_exp_end[Home_DM_exp_end > events_df.at[i,"game_sec"]]
-            Home_major_exp_end = Home_major_exp_end[Home_major_exp_end > events_df.at[i,"game_sec"]]
-
-            Guest_minor_exp_end = Guest_minor_exp_end[Guest_minor_exp_end > events_df.at[i,"game_sec"]]
-            Guest_DM_exp_end = Guest_DM_exp_end[Guest_DM_exp_end > events_df.at[i,"game_sec"]]
-            Guest_major_exp_end = Guest_major_exp_end[Guest_major_exp_end > events_df.at[i,"game_sec"]]   
-
+        
             
         # Update skater number
         # 9. Number of friendly non-goalie skaters
@@ -302,7 +285,6 @@ def parse_game_data(game_id: str, game_data: dict):
         event_secondary_type = event_result_info.get("secondaryType", None)
         
         # Adding penalty related information
-        penaltySeverity = event_result_info.get("penaltySeverity", None)
         penaltyMinutes = event_result_info.get("penaltyMinutes", None)
 
         # event information
@@ -403,7 +385,6 @@ def parse_game_data(game_id: str, game_data: dict):
             "coordinate_y": coord_y,
             
             # Adding penalty related information
-            "penaltySeverity": penaltySeverity,
             "penaltyMinutes": penaltyMinutes,
             
         }
