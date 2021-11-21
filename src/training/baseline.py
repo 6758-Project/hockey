@@ -13,6 +13,8 @@ import sklearn
 from sklearn.linear_model import LogisticRegression
 
 from visuals import generate_shot_classifier_charts
+from utils import clf_performance_metrics, log_experiment
+
 
 # Features to be used in the model
 TRAIN_COLS_BASIC = [
@@ -83,42 +85,10 @@ def preprocess(X_train, X_val):
     return X_train_scaled, X_val_scaled
 
 
-# Calculate and return the metrics using he model prediction
-def clf_performance_metrics(y_true, y_pred, y_proba, verbose=False):
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', sklearn.exceptions.UndefinedMetricWarning)
-        acc = sklearn.metrics.accuracy_score(y_true, y_pred)
-        f1 = sklearn.metrics.f1_score(y_true, y_pred)
-        precision = sklearn.metrics.precision_score(y_true, y_pred)
-        recall = sklearn.metrics.recall_score(y_true, y_pred)
-
-    # Outputting information to the terminal using loging 
-    if verbose:
-        logging.info("Accuracy is {:6.3f}".format(acc))
-        cm = sklearn.metrics.confusion_matrix(y_true, y_pred)
-        logging.info(f"Confusion Matrix:\n {cm}")
-
-        logging.info("F1 score is {:6.3f}".format(f1))
-        logging.info("Precision score is {:6.3f}".format(precision))
-        logging.info("Recall score is {:6.3f}".format(recall))
-
-    res = {
-        'accuracy': acc, 'f1_score': f1, 'precision': precision, 'recall': recall
-    }
-
-    return res
 
 
-# Upload experiment to comet
-def log_experiment(params, perf_metrics, X_train, exp_name=None):
-    comet_exp = Experiment(**EXP_KWARGS)
 
-    comet_exp.log_parameters(params)
-    comet_exp.log_metrics(perf_metrics)
-    comet_exp.log_dataset_hash(X_train)
 
-    if exp_name:
-        comet_exp.set_name(exp_name)
 
 
 def main(args):
@@ -148,8 +118,9 @@ def main(args):
 
         # Log results to comet if commanded
         if args.log_results:
-            log_experiment(EXP_PARAMS, perf_metrics, X_train_sub, exp_name=exp_name)
-
+            logging.info(f"Logging model information for {exp_name}")
+            log_experiment(EXP_PARAMS, perf_metrics, X_train_sub, exp_name=exp_name, **EXP_KWARGS)
+            
             
     # Adding the random baseline        
     exp_names.append('baseline_logreg_Random_Baseline')        
