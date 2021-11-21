@@ -21,7 +21,7 @@ def split_files(nhl_datadir: os.PathLike) -> (List, List, List):
         Returns:
             (train_files, validation_files, test_files) a list of files
     """
-    game_files = os.listdir(nhl_datadir)
+    game_files = [f for f in os.listdir(nhl_datadir) if f.endswith('.csv')]
 
     game_files = pd.DataFrame({'file': game_files})
     season = game_files['file'].apply(lambda f: int(f[:4]))
