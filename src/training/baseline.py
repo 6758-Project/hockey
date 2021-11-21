@@ -4,6 +4,8 @@ import warnings
 logging.basicConfig(level = logging.INFO)
 
 import pandas as pd
+import numpy as np
+import copy
 
 from comet_ml import Experiment
 
@@ -12,22 +14,26 @@ from sklearn.linear_model import LogisticRegression
 
 from visuals import generate_shot_classifier_charts
 
+# Features to be used in the model
 TRAIN_COLS_BASIC = [
     'period', 'goals_home', 'goals_away',
     'shooter_id', 'coordinate_x', 'coordinate_y', 'distance_from_net',
     'angle'
 ]
 
+# Model prediction target
 LABEL_COL = 'is_goal'
 
 RANDOM_STATE = 1729
 
+# Comet API keywards/arguments
 EXP_KWARGS = {
     'project_name': 'ift6758-hockey',
     'workspace': "tim-k-lee",
     'auto_param_logging': False
 }
 
+# Experiment model parameters
 EXP_PARAMS = {
     "random_state": RANDOM_STATE,
     "model_type": "logreg",
@@ -35,10 +41,12 @@ EXP_PARAMS = {
 }
 
 
+# Load training and validation data from the pre-determined location.
 def load_train_and_validation():
     train = pd.read_csv("./data/processed/train_processed.csv")
     val = pd.read_csv("./data/processed/validation_processed.csv")
 
+    # Removing all rows that contains NaN
     na_mask = train[TRAIN_COLS_BASIC+[LABEL_COL]].isnull().any(axis=1)
     logging.info(f"dropping {na_mask.sum()} rows (of {len(train)} total) containing nulls from train")
     train = train[~na_mask]
@@ -56,6 +64,7 @@ def load_train_and_validation():
     return X_train, Y_train, X_val, Y_val
 
 
+# Preprocess the features using z-score scaling
 def preprocess(X_train, X_val):
     scaler = sklearn.preprocessing.StandardScaler().fit(X_train.values)
 
@@ -74,6 +83,7 @@ def preprocess(X_train, X_val):
     return X_train_scaled, X_val_scaled
 
 
+# Calculate and return the metrics using he model prediction
 def clf_performance_metrics(y_true, y_pred, y_proba, verbose=False):
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', sklearn.exceptions.UndefinedMetricWarning)
@@ -82,6 +92,7 @@ def clf_performance_metrics(y_true, y_pred, y_proba, verbose=False):
         precision = sklearn.metrics.precision_score(y_true, y_pred)
         recall = sklearn.metrics.recall_score(y_true, y_pred)
 
+    # Outputting information to the terminal using loging 
     if verbose:
         logging.info("Accuracy is {:6.3f}".format(acc))
         cm = sklearn.metrics.confusion_matrix(y_true, y_pred)
@@ -98,6 +109,7 @@ def clf_performance_metrics(y_true, y_pred, y_proba, verbose=False):
     return res
 
 
+# Upload experiment to comet
 def log_experiment(params, perf_metrics, X_train, exp_name=None):
     comet_exp = Experiment(**EXP_KWARGS)
 
@@ -116,6 +128,8 @@ def main(args):
     y_trues, y_preds, y_probas = [], [], []
     exp_names = ['baseline_logreg_'+sub for sub in ['distance_only', 'angle_only', 'distance_and_angle']]
     col_subsets = [['distance_from_net'], ['angle'], ['distance_from_net', 'angle']]
+    
+    # Exploring the 3 different sets of features as instructed
     for exp_name, subset in zip(exp_names, col_subsets):
         logging.info(f"Processing {exp_name}...")
         X_train_sub = X_train[subset].values
@@ -129,11 +143,28 @@ def main(args):
         y_preds.append(y_pred)
         y_probas.append(y_proba)
 
+        # Generate the performance matrix for this model feature combination
         perf_metrics = clf_performance_metrics(Y_val, y_pred, y_proba, verbose=True)
 
+        # Log results to comet if commanded
         if args.log_results:
             log_experiment(EXP_PARAMS, perf_metrics, X_train_sub, exp_name=exp_name)
 
+            
+    # Adding the random baseline        
+    exp_names.append('baseline_logreg_Random_Baseline')        
+    y_trues.append(Y_val)
+    np.random.seed(RANDOM_STATE)
+    Uni_Dist = np.random.uniform(low=0, high=1, size=len(Y_val))
+    y_proba = copy.deepcopy(Uni_Dist)
+    y_probas.append(y_proba)
+    Uni_Dist[Uni_Dist>= 0.5] = 1 
+    Uni_Dist[Uni_Dist < 0.5] = 0 
+    y_pred = Uni_Dist   
+    y_preds.append(y_pred)       
+            
+        
+    # Generate the images if commanded           
     if args.generate_charts:
         title = "Visual Summary - Simple Logistic Regressions"
         image_dir = "./src/training/visualizations/simple_log_reg/"
