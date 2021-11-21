@@ -138,6 +138,7 @@ def true_positive_rate_curve(
     l, r = ax.get_xlim()
     ax.set_xlim(r, l)  # inverts percentile curves
 
+    ax.set_ylim(0,1)  # should always be shown (0,1)
     ax.set_xlabel("Estimated Probability Percentile")
     ax.set_ylabel("True Positive Rate")
     ax.legend(loc="upper right")
