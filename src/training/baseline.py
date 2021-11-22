@@ -8,8 +8,8 @@ from comet_ml import Experiment
 import sklearn
 from sklearn.linear_model import LogisticRegression
 from visuals import generate_shot_classifier_charts
-from utils import clf_performance_metrics, log_experiment
-import pickle
+from utils import clf_performance_metrics, log_experiment, save_model
+
 
 logging.basicConfig(level = logging.INFO)
 
@@ -95,11 +95,13 @@ def main(args):
 
         # Generate the performance matrix for this model feature combination
         perf_metrics = clf_performance_metrics(Y_val, y_pred, y_proba, verbose=True)
-
-        #Save model to pickle
+        
+        # Set the file path for the pickle file
         pickle_path = f"./models/{exp_name}.pickle"
-        with open(pickle_path,"wb") as f:
-            pickle.dump(clf,f, pickle.HIGHEST_PROTOCOL)
+        
+        #Save model if commanded
+        if args.save_model:
+            save_model(clf, pickle_path)        
         
         # Log results to comet if commanded
         if args.log_results:
@@ -108,7 +110,7 @@ def main(args):
         
             
     # Adding the random baseline        
-    exp_names.append('baseline_logreg_Random_Baseline')        
+    exp_names.append('baseline_random')        
     y_trues.append(Y_val)
     np.random.seed(RANDOM_STATE)
     y_proba = np.random.uniform(low=0, high=1, size=len(Y_val))
@@ -140,6 +142,11 @@ if __name__ == "__main__":
                     help='(boolean) if passed, logs model parameters and performance metrics to Comet.ml',
                     action='store_true')
     parser.set_defaults(log_results=False)
+    
+    parser.add_argument('-s', '--save-model', dest="save_model",
+                    help='(boolean) if passed, save model as pickle to the folder ./models/ with the experiment name',
+                    action='store_true')
+    parser.set_defaults(save_model=False)
     
     args = parser.parse_args()
 

@@ -140,8 +140,6 @@ def true_positive_rate_curve(
 
     ax = plt.gca() if ax is None else ax
     ax = df.plot.line(x='percentile', y='positive_rate', label=label, ax=ax, color=color)
-    l, r = ax.get_xlim()
-    ax.set_xlim(r, l)  # inverts percentile curves
 
     ax.set_xlim([100.05, -0.05])
     ax.set_ylim([-0.05, 1.05])
@@ -182,8 +180,6 @@ def positive_proportion_curve(
 
     ax = plt.gca() if ax is None else ax
     ax = df.plot.line(x='percentile', y='positive_proportion', label=label, ax=ax, color=color)
-    l, r = ax.get_xlim()
-    ax.set_xlim(r, l)  # inverts percentile curves
 
     ax.set_xlim([100.05,-0.05])
     ax.set_ylim([-0.05, 1.05])
@@ -214,7 +210,6 @@ def reliability_curve(
     """
     ax = plt.gca() if ax is None else ax
     cd = CalibrationDisplay.from_predictions(y_true, y_proba, name=label, ax=ax, **kwargs, color=color)
-
     
     ax.set_xlim([-0.05, 1.05])
     ax.set_ylim([-0.05, 1.05])
