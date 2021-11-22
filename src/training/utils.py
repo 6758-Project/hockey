@@ -1,26 +1,20 @@
-from collections.abc import Sequence
-import os
-from typing import List
+"""
+Utility functions for generating model performance and uploading experiment parameters to comet
+"""
 
-import argparse
 import logging
 import warnings
-logging.basicConfig(level = logging.INFO)
-
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-import copy
-
 import sklearn
-from sklearn import metrics
-from sklearn.calibration import CalibrationDisplay
-from sklearn.linear_model import LogisticRegression
-
 from comet_ml import Experiment
 
+logging.basicConfig(level = logging.INFO)
 
-
+# Comet API keywards/arguments
+EXP_KWARGS = {
+    'project_name': 'ift6758-hockey',
+    'workspace': "tim-k-lee",
+    'auto_param_logging': False
+}
 
 
 # Calculate and return the metrics using he model prediction
@@ -50,7 +44,7 @@ def clf_performance_metrics(y_true, y_pred, y_proba, verbose=False):
         
         
 # Upload experiment to comet
-def log_experiment(params, perf_metrics, X_train, exp_name=None, **EXP_KWARGS):
+def log_experiment(params, perf_metrics, X_train, exp_name=None):
     comet_exp = Experiment(**EXP_KWARGS)
 
     comet_exp.log_parameters(params)
@@ -59,14 +53,4 @@ def log_experiment(params, perf_metrics, X_train, exp_name=None, **EXP_KWARGS):
 
     if exp_name:
         comet_exp.set_name(exp_name)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         

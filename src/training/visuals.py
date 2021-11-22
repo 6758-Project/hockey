@@ -82,23 +82,25 @@ def roc_auc_curve(
     Returns:
         ax: current Matplotlib axes
     """
-    if include_baseline:
-        baseline_proba = np.ones_like(y_proba) * .5
-        fpr, tpr, thresholds = metrics.roc_curve(y_true, baseline_proba)
-
-        ax.plot(tpr, tpr, lw=2, linestyle="--", label="baseline", color='k')
     
     fpr, tpr, thresholds = metrics.roc_curve(y_true, y_proba)
     auc = metrics.auc(fpr, tpr)
 
     ax = plt.gca() if ax is None else ax
+    
+    if include_baseline:
+        baseline_proba = np.ones_like(y_proba) * .5
+        fpr, tpr, thresholds = metrics.roc_curve(y_true, baseline_proba)
+
+        ax.plot(tpr, tpr, lw=2, linestyle="--", label="baseline", color='k')     
+    
     ax.plot(fpr, tpr, lw=2, label=label + f" (AUC={round(auc, 4)})", color=color)
 
-    ax.set_xlim([-0.01, 1.01])
-    ax.set_ylim([-0.01, 1.01])
+    ax.set_xlim([-0.05, 1.05])
+    ax.set_ylim([-0.05, 1.05])
     ax.set_xlabel("False Positive Rate")
     ax.set_ylabel("True Positive Rate")
-    ax.legend(loc="lower right")
+    ax.legend(loc="upper left")
 
     return ax
 
@@ -141,11 +143,11 @@ def true_positive_rate_curve(
     l, r = ax.get_xlim()
     ax.set_xlim(r, l)  # inverts percentile curves
 
-    ax.set_xlim([-0.01, 100.01])
-    ax.set_ylim([-0.01, 1.01])
+    ax.set_xlim([100.05, -0.05])
+    ax.set_ylim([-0.05, 1.05])
     ax.set_xlabel("Estimated Probability Percentile")
     ax.set_ylabel("True Positive Rate")
-    ax.legend(loc="upper right")
+    ax.legend(loc="upper left")
 
     return ax
 
@@ -183,11 +185,11 @@ def positive_proportion_curve(
     l, r = ax.get_xlim()
     ax.set_xlim(r, l)  # inverts percentile curves
 
-    ax.set_xlim([-0.01, 100.01])
-    ax.set_ylim([-0.01, 1.01])
+    ax.set_xlim([100.05,-0.05])
+    ax.set_ylim([-0.05, 1.05])
     ax.set_xlabel("Estimated Probability Percentile")
     ax.set_ylabel("Cumulative Positive Proportion")
-    ax.legend(loc="lower left")
+    ax.legend(loc="upper left")
 
     return ax
 
@@ -214,10 +216,8 @@ def reliability_curve(
     cd = CalibrationDisplay.from_predictions(y_true, y_proba, name=label, ax=ax, **kwargs, color=color)
 
     
-    ax.set_xlim([-0.01, 1.01])
-    ax.set_ylim([-0.01, 1.01])
-    #fig = plt.gcf()
-    #plt.title(f"Reliability Curve: {label}")
+    ax.set_xlim([-0.05, 1.05])
+    ax.set_ylim([-0.05, 1.05])
     ax.legend(loc="upper left")
     
     return cd.ax_

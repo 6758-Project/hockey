@@ -1,41 +1,27 @@
 import argparse
 import logging
 import warnings
-logging.basicConfig(level = logging.INFO)
-
+import sklearn
 import pandas as pd
 import numpy as np
 import copy
-
 from comet_ml import Experiment
-
-import sklearn
 from sklearn.linear_model import LogisticRegression
-
 from visuals import generate_shot_classifier_charts
 from utils import clf_performance_metrics, log_experiment
 
+logging.basicConfig(level = logging.INFO)
 
-# Features to be used in the model
 TRAIN_COLS_BASIC = [
     'period', 'goals_home', 'goals_away',
     'shooter_id', 'coordinate_x', 'coordinate_y', 'distance_from_net',
     'angle'
 ]
 
-# Model prediction target
 LABEL_COL = 'is_goal'
 
 RANDOM_STATE = 1729
 
-# Comet API keywards/arguments
-EXP_KWARGS = {
-    'project_name': 'ift6758-hockey',
-    'workspace': "tim-k-lee",
-    'auto_param_logging': False
-}
-
-# Experiment model parameters
 EXP_PARAMS = {
     "random_state": RANDOM_STATE,
     "model_type": "logreg",
@@ -48,7 +34,6 @@ def load_train_and_validation():
     train = pd.read_csv("./data/processed/train_processed.csv")
     val = pd.read_csv("./data/processed/validation_processed.csv")
 
-    # Removing all rows that contains NaN
     na_mask = train[TRAIN_COLS_BASIC+[LABEL_COL]].isnull().any(axis=1)
     logging.info(f"dropping {na_mask.sum()} rows (of {len(train)} total) containing nulls from train")
     train = train[~na_mask]
@@ -85,12 +70,6 @@ def preprocess(X_train, X_val):
     return X_train_scaled, X_val_scaled
 
 
-
-
-
-
-
-
 def main(args):
     X_train, Y_train, X_val, Y_val = load_train_and_validation()
     X_train, X_val = preprocess(X_train, X_val)
@@ -119,21 +98,18 @@ def main(args):
         # Log results to comet if commanded
         if args.log_results:
             logging.info(f"Logging model information for {exp_name}")
-            log_experiment(EXP_PARAMS, perf_metrics, X_train_sub, exp_name=exp_name, **EXP_KWARGS)
+            log_experiment(EXP_PARAMS, perf_metrics, X_train_sub, exp_name=exp_name)
             
             
     # Adding the random baseline        
     exp_names.append('baseline_logreg_Random_Baseline')        
     y_trues.append(Y_val)
     np.random.seed(RANDOM_STATE)
-    Uni_Dist = np.random.uniform(low=0, high=1, size=len(Y_val))
-    y_proba = copy.deepcopy(Uni_Dist)
+    y_proba = np.random.uniform(low=0, high=1, size=len(Y_val))
     y_probas.append(y_proba)
-    Uni_Dist[Uni_Dist>= 0.5] = 1 
-    Uni_Dist[Uni_Dist < 0.5] = 0 
-    y_pred = Uni_Dist   
-    y_preds.append(y_pred)       
-            
+    y_pred = (y_proba >=0.5).astype(int)
+    y_preds.append(y_pred)    
+    
         
     # Generate the images if commanded           
     if args.generate_charts:
@@ -144,8 +120,6 @@ def main(args):
             y_trues, y_preds, y_probas, exp_names,
             title=title, image_dir=image_dir
         )
-
-
 
 
 if __name__ == "__main__":
