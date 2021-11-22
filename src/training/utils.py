@@ -2,10 +2,12 @@
 Utility functions for generating model performance and uploading experiment parameters to comet
 """
 
+from comet_ml import Experiment
+from comet_ml import API
 import logging
 import warnings
 import sklearn
-from comet_ml import Experiment
+
 
 logging.basicConfig(level = logging.INFO)
 
@@ -44,13 +46,15 @@ def clf_performance_metrics(y_true, y_pred, y_proba, verbose=False):
         
         
 # Upload experiment to comet
-def log_experiment(params, perf_metrics, X_train, exp_name=None):
+def log_experiment(params, perf_metrics, X_train, exp_name=None, pickle_path=None):
     comet_exp = Experiment(**EXP_KWARGS)
 
+    if exp_name:
+        comet_exp.set_name(exp_name)    
+        if pickle_path != None:
+            comet_exp.log_model(name=exp_name,file_or_folder = pickle_path)      
+    
     comet_exp.log_parameters(params)
     comet_exp.log_metrics(perf_metrics)
     comet_exp.log_dataset_hash(X_train)
-
-    if exp_name:
-        comet_exp.set_name(exp_name)
-        
+    
