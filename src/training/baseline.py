@@ -78,7 +78,7 @@ def main(args):
     X_train, X_val = preprocess(X_train, X_val)
 
     y_trues, y_preds, y_probas = [], [], []
-    exp_names = ['baseline_logreg_'+sub for sub in ['distance_only', 'angle_only', 'distance_and_angle']]
+    exp_names = ['logistic_regression_'+sub for sub in ['distance_only', 'angle_only', 'distance_and_angle']]
     col_subsets = [['distance_from_net'], ['angle'], ['distance_from_net', 'angle']]
 
     # Exploring the 3 different sets of features as instructed
@@ -107,7 +107,7 @@ def main(args):
 
 
     # Adding the random baseline
-    exp_names.append('baseline_random')
+    exp_names.append('baseline (uniform random)')
     y_trues.append(Y_val)
     np.random.seed(RANDOM_STATE)
     y_proba = np.random.uniform(low=0, high=1, size=len(Y_val))

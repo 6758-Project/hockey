@@ -36,9 +36,9 @@ def generate_shot_classifier_charts(
 
     M = len(exp_names)
     for i in range(M):
-        
+
         color=next(axes[0,0]._get_lines.prop_cycler)['color']
-        
+
         ax = roc_auc_curve(
             y_trues[i], y_probas[i], label=exp_names[i],
             include_baseline=(i==0), ax=axes[0,0], color=color
@@ -84,14 +84,14 @@ def roc_auc_curve(
     """
 
     ax = plt.gca() if ax is None else ax
-    
+
     if include_baseline:
         baseline_proba = np.ones_like(y_proba) * .5
         fpr, tpr, thresholds = metrics.roc_curve(y_true, baseline_proba)
-        ax.plot(tpr, tpr, lw=2, linestyle="--", label="baseline", color='k')     
- 
+        ax.plot(tpr, tpr, lw=2, linestyle="--", label="baseline (50/50)", color='k')
+
     fpr, tpr, thresholds = metrics.roc_curve(y_true, y_proba)
-    auc = metrics.auc(fpr, tpr)    
+    auc = metrics.auc(fpr, tpr)
     ax.plot(fpr, tpr, lw=2, label=label + f" (AUC={round(auc, 4)})", color=color)
 
     ax.set_xlim([-0.05, 1.05])
@@ -208,9 +208,9 @@ def reliability_curve(
     """
     ax = plt.gca() if ax is None else ax
     cd = CalibrationDisplay.from_predictions(y_true, y_proba, name=label, ax=ax, **kwargs, color=color)
-    
+
     ax.set_xlim([-0.05, 1.05])
     ax.set_ylim([-0.05, 1.05])
     ax.legend(loc="upper left")
-    
+
     return cd.ax_
