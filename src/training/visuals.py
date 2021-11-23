@@ -82,18 +82,16 @@ def roc_auc_curve(
     Returns:
         ax: current Matplotlib axes
     """
-    
-    fpr, tpr, thresholds = metrics.roc_curve(y_true, y_proba)
-    auc = metrics.auc(fpr, tpr)
 
     ax = plt.gca() if ax is None else ax
     
     if include_baseline:
         baseline_proba = np.ones_like(y_proba) * .5
         fpr, tpr, thresholds = metrics.roc_curve(y_true, baseline_proba)
-
         ax.plot(tpr, tpr, lw=2, linestyle="--", label="baseline", color='k')     
-    
+ 
+    fpr, tpr, thresholds = metrics.roc_curve(y_true, y_proba)
+    auc = metrics.auc(fpr, tpr)    
     ax.plot(fpr, tpr, lw=2, label=label + f" (AUC={round(auc, 4)})", color=color)
 
     ax.set_xlim([-0.05, 1.05])
