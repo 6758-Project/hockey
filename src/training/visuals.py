@@ -36,25 +36,28 @@ def generate_shot_classifier_charts(
 
     M = len(exp_names)
     for i in range(M):
+        
+        color=next(axes[0,0]._get_lines.prop_cycler)['color']
+        
         ax = roc_auc_curve(
             y_trues[i], y_probas[i], label=exp_names[i],
-            include_baseline=(i==0), ax=axes[0,0]
+            include_baseline=(i==0), ax=axes[0,0], color=color
         )
         ax.set_title("ROC")
 
         ax = reliability_curve(
             y_trues[i], y_probas[i], label=exp_names[i],
-            ax=axes[0,1], n_bins=(len(y_trues[i])//300), strategy='quantile', lw=1
+            ax=axes[0,1], n_bins=(len(y_trues[i])//300), strategy='quantile', lw=1, color=color
         )
         ax.set_title("Reliability")
 
         ax = true_positive_rate_curve(
-            y_trues[i], y_probas[i], label=exp_names[i], ax=axes[1,0]
+            y_trues[i], y_probas[i], label=exp_names[i], ax=axes[1,0], color=color
         )
         ax.set_title("True Positive Rate by Percentile")
 
         ax = positive_proportion_curve(
-            y_trues[i], y_probas[i], label=exp_names[i], ax=axes[1,1]
+            y_trues[i], y_probas[i], label=exp_names[i], ax=axes[1,1], color=color
         )
         ax.set_title("Positive Proportion by Percentile")
 
@@ -65,7 +68,7 @@ def generate_shot_classifier_charts(
 
 def roc_auc_curve(
     y_true: Sequence[int], y_proba: Sequence[float],
-    label: str = "provided", include_baseline: bool = True, ax=None):
+    label: str = "provided", include_baseline: bool = True, ax=None, color='b'):
     """ Generates a ROC Curve for a pair of label and predicted probability vectors
 
     Args:
@@ -79,30 +82,30 @@ def roc_auc_curve(
     Returns:
         ax: current Matplotlib axes
     """
-    fpr, tpr, thresholds = metrics.roc_curve(y_true, y_proba)
-    auc = metrics.auc(fpr, tpr)
 
     ax = plt.gca() if ax is None else ax
-    ax.plot(fpr, tpr, lw=2, label=label + f" (AUC={round(auc, 4)})")
-
+    
     if include_baseline:
         baseline_proba = np.ones_like(y_proba) * .5
         fpr, tpr, thresholds = metrics.roc_curve(y_true, baseline_proba)
+        ax.plot(tpr, tpr, lw=2, linestyle="--", label="baseline", color='k')     
+ 
+    fpr, tpr, thresholds = metrics.roc_curve(y_true, y_proba)
+    auc = metrics.auc(fpr, tpr)    
+    ax.plot(fpr, tpr, lw=2, label=label + f" (AUC={round(auc, 4)})", color=color)
 
-        ax.plot(tpr, tpr, lw=2, linestyle="--", label="baseline")
-
-    ax.set_xlim([0.0, 1.0])
-    ax.set_ylim([0.0, 1.05])
+    ax.set_xlim([-0.05, 1.05])
+    ax.set_ylim([-0.05, 1.05])
     ax.set_xlabel("False Positive Rate")
     ax.set_ylabel("True Positive Rate")
-    ax.legend(loc="lower right")
+    ax.legend(loc="upper left")
 
     return ax
 
 
 def true_positive_rate_curve(
     y_true: Sequence[int], y_proba: Sequence[float], label: str = "provided",
-    ax=None):
+    ax=None, color='b'):
     """ Generates a positive rate curve for a pair of label and estimated probability vectors.
 
     A true positive rate curve plots the proportion of positives as a function of estimated
@@ -134,20 +137,20 @@ def true_positive_rate_curve(
     df = df[df['percentile'] <= 97.5]  # trim extremes before plotting
 
     ax = plt.gca() if ax is None else ax
-    ax = df.plot.line(x='percentile', y='positive_rate', label=label, ax=ax)
-    l, r = ax.get_xlim()
-    ax.set_xlim(r, l)  # inverts percentile curves
+    ax = df.plot.line(x='percentile', y='positive_rate', label=label, ax=ax, color=color)
 
+    ax.set_xlim([100.05, -0.05])
+    ax.set_ylim([-0.05, 1.05])
     ax.set_xlabel("Estimated Probability Percentile")
     ax.set_ylabel("True Positive Rate")
-    ax.legend(loc="upper right")
+    ax.legend(loc="upper left")
 
     return ax
 
 
 def positive_proportion_curve(
     y_true: Sequence[int], y_proba: Sequence[float], label: str = "provided",
-    ax=None):
+    ax=None, color='b'):
     """ Generates a positive proportion curve for a pair of label and estimated probability vectors.
 
     A positive distribution curve plots the proportion of population positives as a function of estimated probability percentiles.
@@ -174,20 +177,20 @@ def positive_proportion_curve(
     df['positive_proportion'] = run_sum / df['y_true'].sum()
 
     ax = plt.gca() if ax is None else ax
-    ax = df.plot.line(x='percentile', y='positive_proportion', label=label, ax=ax)
-    l, r = ax.get_xlim()
-    ax.set_xlim(r, l)  # inverts percentile curves
+    ax = df.plot.line(x='percentile', y='positive_proportion', label=label, ax=ax, color=color)
 
+    ax.set_xlim([100.05,-0.05])
+    ax.set_ylim([-0.05, 1.05])
     ax.set_xlabel("Estimated Probability Percentile")
     ax.set_ylabel("Cumulative Positive Proportion")
-    ax.legend(loc="lower right")
+    ax.legend(loc="upper left")
 
     return ax
 
 
 def reliability_curve(
     y_true: Sequence[int], y_proba: Sequence[float], label: str = "provided",
-    ax=None, **kwargs: dict):
+    ax=None, color='b', **kwargs: dict):
     """ Generates a reliability curve for a pair of label and estimated probability vectors.
 
     See scikit learn's CalibrationDisplay for more:
@@ -204,9 +207,10 @@ def reliability_curve(
         ax: current Matplotlib axes
     """
     ax = plt.gca() if ax is None else ax
-    cd = CalibrationDisplay.from_predictions(y_true, y_proba, name=label, ax=ax, **kwargs)
-
-    fig = plt.gcf()
-    plt.title(f"Reliability Curve: {label}")
-
+    cd = CalibrationDisplay.from_predictions(y_true, y_proba, name=label, ax=ax, **kwargs, color=color)
+    
+    ax.set_xlim([-0.05, 1.05])
+    ax.set_ylim([-0.05, 1.05])
+    ax.legend(loc="upper left")
+    
     return cd.ax_
