@@ -1,14 +1,16 @@
 import argparse
 import logging
-import warnings
+
 import pandas as pd
 import numpy as np
-import copy
-from comet_ml import Experiment
+
 import sklearn
 from sklearn.linear_model import LogisticRegression
+
+from comet_ml import Experiment
+
 from visuals import generate_shot_classifier_charts
-from utils import clf_performance_metrics, log_experiment, save_model
+from utils import clf_performance_metrics, log_experiment, register_model
 
 
 logging.basicConfig(level = logging.INFO)
@@ -78,7 +80,7 @@ def main(args):
     y_trues, y_preds, y_probas = [], [], []
     exp_names = ['baseline_logreg_'+sub for sub in ['distance_only', 'angle_only', 'distance_and_angle']]
     col_subsets = [['distance_from_net'], ['angle'], ['distance_from_net', 'angle']]
-    
+
     # Exploring the 3 different sets of features as instructed
     for exp_name, subset in zip(exp_names, col_subsets):
         logging.info(f"Processing {exp_name}...")
@@ -93,36 +95,31 @@ def main(args):
         y_preds.append(y_pred)
         y_probas.append(y_proba)
 
-        # Generate the performance matrix for this model feature combination
         perf_metrics = clf_performance_metrics(Y_val, y_pred, y_proba, verbose=True)
-        
-        # Set the file path for the pickle file
-        pickle_path = f"./models/{exp_name}.pickle"
-        
-        #Save model if commanded
-        if args.save_model:
-            save_model(clf, pickle_path)        
-        
-        # Log results to comet if commanded
+
         if args.log_results:
             logging.info(f"Logging model information for {exp_name}")
-            log_experiment(EXP_PARAMS, perf_metrics, X_train_sub, exp_name=exp_name, pickle_path=pickle_path)
-        
-            
-    # Adding the random baseline        
-    exp_names.append('baseline_random')        
+            comet_exp = log_experiment(EXP_PARAMS, perf_metrics, X_train_sub, exp_name=exp_name)
+
+            if args.register_model:
+                pickle_path = f"./models/{exp_name}.pickle"
+                register_model(clf, comet_exp, pickle_path)
+
+
+    # Adding the random baseline
+    exp_names.append('baseline_random')
     y_trues.append(Y_val)
     np.random.seed(RANDOM_STATE)
     y_proba = np.random.uniform(low=0, high=1, size=len(Y_val))
     y_probas.append(y_proba)
     y_pred = (y_proba >=0.5).astype(int)
-    y_preds.append(y_pred)    
-    
-        
-    # Generate the images if commanded           
+    y_preds.append(y_pred)
+
+
+    # Generate the images if commanded
     if args.generate_charts:
         title = "Visual Summary - Simple Logistic Regressions"
-        image_dir = "./src/training/visualizations/simple_log_reg/"
+        image_dir = "./figures/baseline_models/"
 
         generate_shot_classifier_charts(
             y_trues, y_preds, y_probas, exp_names,
@@ -142,12 +139,15 @@ if __name__ == "__main__":
                     help='(boolean) if passed, logs model parameters and performance metrics to Comet.ml',
                     action='store_true')
     parser.set_defaults(log_results=False)
-    
-    parser.add_argument('-s', '--save-model', dest="save_model",
-                    help='(boolean) if passed, save model as pickle to the folder ./models/ with the experiment name',
+
+    parser.add_argument('-s', '--register-model', dest="register_model",
+                    help="(boolean) if passed, upload model to registry",
                     action='store_true')
-    parser.set_defaults(save_model=False)
-    
+    parser.set_defaults(register_model=False)
+
     args = parser.parse_args()
+
+    if not args.log_results and args.register_model:
+        raise ValueError("Cannot register model if results are not logged")
 
     main(args)
