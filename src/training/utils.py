@@ -1,6 +1,7 @@
 """ Utilities for training models """
 
 import logging
+import pickle
 import warnings
 logging.basicConfig(level = logging.INFO)
 
@@ -40,13 +41,22 @@ TRAIN_COLS_ADV = [
     'prev_event_type', 'is_rebound', 'rebound_angle', 'is_empty_net'
 ]
 
+RANDOM_STATE = 1729
 
 
 
 # Functions
 
-
 def clf_performance_metrics(y_true, y_pred, y_proba, verbose=False):
+    """Generate the model performance metrics.
+
+    Args:
+        y_true: True label
+        y_pred: Predicted label
+        y_proba: Probability of label prediction
+        verbose: Display information of metrics
+    """
+
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', sklearn.exceptions.UndefinedMetricWarning)
         acc = sklearn.metrics.accuracy_score(y_true, y_pred)
@@ -70,7 +80,17 @@ def clf_performance_metrics(y_true, y_pred, y_proba, verbose=False):
     return res
 
 
-def log_experiment(params, perf_metrics, X_train, exp_name=None):
+def log_experiment(params, perf_metrics, X_train, exp_name=None, pickle_path=None):
+    """Log model parameters and performance metrics to Comet.
+    Args:
+        params: Model parameters
+        perf_metrics: Performance information of the model
+        X_train: Features used to train the model
+        exp_name: Name of the experiment
+        pickle_path: file name and folder directry where the pickle file is located
+    Returns:
+        comet_exp: a Comet.ml Experiment object
+    """
     comet_exp = Experiment(**EXP_KWARGS)
 
     comet_exp.log_parameters(params)
@@ -79,3 +99,23 @@ def log_experiment(params, perf_metrics, X_train, exp_name=None):
 
     if exp_name:
         comet_exp.set_name(exp_name)
+
+    return comet_exp
+
+
+def register_model(clf, comet_exp, pickle_path=None):
+    """Uploads model to comet.ml registry
+
+    Args:
+        clf: model to be saved
+        comet_exp: a Comet.ml experiment
+        pickle_path: file name and folder directry where the pickle file will be saved
+    """
+    if not clf or not pickle_path:
+        logging.info("Parameters missing, cannot save files")
+    else:
+        logging.info("Saving model to pickle file")
+        with open(pickle_path,"wb") as f:
+            pickle.dump(clf, f, pickle.HIGHEST_PROTOCOL)
+
+        comet_exp.log_model(name=comet_exp.get_name(), file_or_folder=pickle_path)

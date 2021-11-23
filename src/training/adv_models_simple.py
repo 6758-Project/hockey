@@ -8,10 +8,9 @@ import pandas as pd
 
 import xgboost as xgb
 
-from utils import EXP_KWARGS
+from utils import EXP_KWARGS, LABEL_COL
 
 TRAIN_COLS = ['distance_from_net', 'angle']
-LABEL_COL = 'is_goal'
 
 EXP_PARAMS = {
     "model_type": "xgboost"

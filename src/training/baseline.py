@@ -1,32 +1,23 @@
 import argparse
 import logging
-import warnings
+
 logging.basicConfig(level = logging.INFO)
 
 import pandas as pd
+import numpy as np
 
-from comet_ml import Experiment
+import comet_ml
 
 import sklearn
 from sklearn.linear_model import LogisticRegression
 
+
 from visuals import generate_shot_classifier_charts
+from utils import (
+    clf_performance_metrics, log_experiment, register_model,
+    TRAIN_COLS_BASIC, LABEL_COL, RANDOM_STATE
+)
 
-TRAIN_COLS_BASIC = [
-    'period', 'goals_home', 'goals_away',
-    'shooter_id', 'coordinate_x', 'coordinate_y', 'distance_from_net',
-    'angle'
-]
-
-LABEL_COL = 'is_goal'
-
-RANDOM_STATE = 1729
-
-EXP_KWARGS = {
-    'project_name': 'ift6758-hockey',
-    'workspace': "tim-k-lee",
-    'auto_param_logging': False
-}
 
 EXP_PARAMS = {
     "random_state": RANDOM_STATE,
@@ -74,48 +65,14 @@ def preprocess(X_train, X_val):
     return X_train_scaled, X_val_scaled
 
 
-def clf_performance_metrics(y_true, y_pred, y_proba, verbose=False):
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', sklearn.exceptions.UndefinedMetricWarning)
-        acc = sklearn.metrics.accuracy_score(y_true, y_pred)
-        f1 = sklearn.metrics.f1_score(y_true, y_pred)
-        precision = sklearn.metrics.precision_score(y_true, y_pred)
-        recall = sklearn.metrics.recall_score(y_true, y_pred)
-
-    if verbose:
-        logging.info("Accuracy is {:6.3f}".format(acc))
-        cm = sklearn.metrics.confusion_matrix(y_true, y_pred)
-        logging.info(f"Confusion Matrix:\n {cm}")
-
-        logging.info("F1 score is {:6.3f}".format(f1))
-        logging.info("Precision score is {:6.3f}".format(precision))
-        logging.info("Recall score is {:6.3f}".format(recall))
-
-    res = {
-        'accuracy': acc, 'f1_score': f1, 'precision': precision, 'recall': recall
-    }
-
-    return res
-
-
-def log_experiment(params, perf_metrics, X_train, exp_name=None):
-    comet_exp = Experiment(**EXP_KWARGS)
-
-    comet_exp.log_parameters(params)
-    comet_exp.log_metrics(perf_metrics)
-    comet_exp.log_dataset_hash(X_train)
-
-    if exp_name:
-        comet_exp.set_name(exp_name)
-
-
 def main(args):
     X_train, Y_train, X_val, Y_val = load_train_and_validation()
     X_train, X_val = preprocess(X_train, X_val)
 
     y_trues, y_preds, y_probas = [], [], []
-    exp_names = ['baseline_logreg_'+sub for sub in ['distance_only', 'angle_only', 'distance_and_angle']]
+    exp_names = ['logistic_regression_'+sub for sub in ['distance_only', 'angle_only', 'distance_and_angle']]
     col_subsets = [['distance_from_net'], ['angle'], ['distance_from_net', 'angle']]
+
     for exp_name, subset in zip(exp_names, col_subsets):
         logging.info(f"Processing {exp_name}...")
         X_train_sub = X_train[subset].values
@@ -132,18 +89,31 @@ def main(args):
         perf_metrics = clf_performance_metrics(Y_val, y_pred, y_proba, verbose=True)
 
         if args.log_results:
-            log_experiment(EXP_PARAMS, perf_metrics, X_train_sub, exp_name=exp_name)
+            logging.info(f"Logging model information for {exp_name}")
+            comet_exp = log_experiment(EXP_PARAMS, perf_metrics, X_train_sub, exp_name=exp_name)
+
+            if args.register_models:
+                pickle_path = f"./models/{exp_name}.pickle"
+                register_model(clf, comet_exp, pickle_path)
+
+
+    # Adding the random baseline
+    exp_names.append('baseline (uniform random)')
+    y_trues.append(Y_val)
+    np.random.seed(RANDOM_STATE)
+    y_proba = np.random.uniform(low=0, high=1, size=len(Y_val))
+    y_probas.append(y_proba)
+    y_pred = (y_proba >=0.5).astype(int)
+    y_preds.append(y_pred)
 
     if args.generate_charts:
         title = "Visual Summary - Simple Logistic Regressions"
-        image_dir = "./src/training/visualizations/simple_log_reg/"
+        image_dir = "./figures/baseline_models/"
 
         generate_shot_classifier_charts(
             y_trues, y_preds, y_probas, exp_names,
             title=title, image_dir=image_dir
         )
-
-
 
 
 if __name__ == "__main__":
@@ -159,6 +129,14 @@ if __name__ == "__main__":
                     action='store_true')
     parser.set_defaults(log_results=False)
 
+    parser.add_argument('-s', '--register-models', dest="register_models",
+                    help="(boolean) if passed, upload model to registry",
+                    action='store_true')
+    parser.set_defaults(register_models=False)
+
     args = parser.parse_args()
+
+    if not args.log_results and args.register_models:
+        raise ValueError("Cannot register model if results are not logged")
 
     main(args)
