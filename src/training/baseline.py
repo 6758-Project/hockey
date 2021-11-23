@@ -4,10 +4,11 @@ import logging
 import pandas as pd
 import numpy as np
 
+import comet_ml
+
 import sklearn
 from sklearn.linear_model import LogisticRegression
 
-from comet_ml import Experiment
 
 from visuals import generate_shot_classifier_charts
 from utils import clf_performance_metrics, log_experiment, register_model
@@ -101,7 +102,7 @@ def main(args):
             logging.info(f"Logging model information for {exp_name}")
             comet_exp = log_experiment(EXP_PARAMS, perf_metrics, X_train_sub, exp_name=exp_name)
 
-            if args.register_model:
+            if args.register_models:
                 pickle_path = f"./models/{exp_name}.pickle"
                 register_model(clf, comet_exp, pickle_path)
 
@@ -140,14 +141,14 @@ if __name__ == "__main__":
                     action='store_true')
     parser.set_defaults(log_results=False)
 
-    parser.add_argument('-s', '--register-model', dest="register_model",
+    parser.add_argument('-s', '--register-models', dest="register_models",
                     help="(boolean) if passed, upload model to registry",
                     action='store_true')
-    parser.set_defaults(register_model=False)
+    parser.set_defaults(register_models=False)
 
     args = parser.parse_args()
 
-    if not args.log_results and args.register_model:
+    if not args.log_results and args.register_models:
         raise ValueError("Cannot register model if results are not logged")
 
     main(args)

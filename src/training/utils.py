@@ -7,10 +7,11 @@ import pickle
 import os
 import warnings
 
-import sklearn
-
 from comet_ml import Experiment
 from comet_ml import API
+
+import sklearn
+
 
 logging.basicConfig(level = logging.INFO)
 
