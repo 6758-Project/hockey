@@ -57,8 +57,12 @@ def add_milestone2_advanced_metrics(events_df):
     # getting information about previous events using df.shift(periods=1)
     prev_events_df = events_df.shift(periods=1)
 
-    # 2. previous event type
+    # 2.a previous event type
     events_df["prev_event_type"] = prev_events_df["type"]
+
+    # 2.b previous event coordinates
+    events_df["prev_event_x_coord"] = prev_events_df["coordinate_x"]
+    events_df["prev_event_y_coord"] = prev_events_df["coordinate_y"]
 
     # 3. time difference in seconds
     events_df["prev_event_time_diff"] = (
