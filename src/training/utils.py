@@ -19,6 +19,10 @@ EXP_KWARGS = {
 
 LABEL_COL = 'is_goal'
 
+INFREQUENT_STOPPAGE_EVENTS = [
+    'PERIOD_START', 'PERIOD_READY', 'PERIOD_END', 'SHOOTOUT_COMPLETE', 'PERIOD_OFFICIAL', 'GAME_OFFICIAL', 'PENALTY', 'GOAL', 'CHALLENGE'
+]
+
 KNOWN_NON_TRAIN_COLS = [
     'game_id', 'event_index', 'description',
     'game_sec', 'time', 'time_remaining', 'date', 'prev_event_time_diff',
@@ -33,16 +37,15 @@ TRAIN_COLS_BASIC = [
 
 # TODO: throw out is_empty_net + associated rows?
 # see https://piazza.com/class/krgt4sfrgfp278?cid=255
-TRAIN_COLS_ADV = [
-    'period_type', 'period', 'goals_home', 'goals_away',
-    'shooter_team_name', 'shooter_id', 'secondary_type', 'goalie_name',
+TRAIN_COLS_PART_4 = [
+    'game_sec', 'period',
+    'secondary_type',
     'coordinate_x', 'coordinate_y', 'distance_from_net', 'angle',
-    'angle_between_prev_event', 'distance_from_prev_event', 'speed',
-    'prev_event_type', 'is_rebound', 'rebound_angle', 'is_empty_net'
-]
+    'prev_event_type', 'angle_between_prev_event', 'distance_from_prev_event', 'prev_event_time_diff',
+    'speed', 'is_rebound', 'rebound_angle', 'is_empty_net'
+]  # 'period_type', 'shooter_team_name', 'shooter_id', 'goalie_name',
 
 RANDOM_STATE = 1729
-
 
 
 # Functions
