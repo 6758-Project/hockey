@@ -52,15 +52,15 @@ def preprocess(X_train, X_val):
     X_train = pd.get_dummies(X_train, ["shot", "prev_event"])
     X_val = pd.get_dummies(X_val, ["shot", "prev_event"])
 
+    # prepare training data to fit lasso model
+    X_train = X_train.fillna(0)
+
     return X_train, X_val
 
 
 if __name__ == "__main__":
     X_train, Y_train, X_val, Y_val = load_train_and_validation()
     X_train, X_val = preprocess(X_train, X_val)
-
-    # prepare training data to fit lasso model
-    X_train = X_train.fillna(0)
 
     lass_feat_selector = feature_selection.SelectFromModel(
         estimator=linear_model.Lasso(alpha=0.001)

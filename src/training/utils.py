@@ -3,9 +3,8 @@
 import logging
 import pickle
 import warnings
-import sklearn
-
 from comet_ml import Experiment
+import sklearn
 
 logging.basicConfig(level=logging.INFO)
 
