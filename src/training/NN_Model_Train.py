@@ -167,7 +167,7 @@ def main(args):
             generate_adv_model_figures(exp_pred_filename,title,image_dir)
 
         if args.log_results:  
-            comet_exp = log_experiment(EXP_PARAMS, perf_metrics, X_train_scaled, 'NN_distance')
+            comet_exp = log_experiment(EXP_PARAMS, perf_metrics, X_train_scaled, exp_name)
             if args.register_models:  
                 pickle_path = f"./models/{exp_name}.pickle"
                 register_model(clf, comet_exp, pickle_path)
