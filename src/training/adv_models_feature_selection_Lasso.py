@@ -1,10 +1,13 @@
-""" Trains and saves an XGBoost tree model trained after tuning the hyperparameters with distance, angle and other features.
+""" Trains and saves an XGBoost tree model trained on selected features with two different methods
 """
 import os
 import logging
 import pandas as pd
 import comet_ml
 import xgboost as xgb
+from sklearn import feature_selection
+from sklearn import linear_model
+
 
 from utils import (
     INFREQUENT_STOPPAGE_EVENTS,
@@ -17,7 +20,7 @@ from utils import (
 
 logging.basicConfig(level=logging.INFO)
 
-EXP_NAME = "xgboost_optimal"
+EXP_NAME = "xgboost_lasso"
 
 EXP_PARAMS = {"model_type": "xgboost"}
 
@@ -49,6 +52,9 @@ def preprocess(X_train, X_val):
     X_train = pd.get_dummies(X_train, ["shot", "prev_event"])
     X_val = pd.get_dummies(X_val, ["shot", "prev_event"])
 
+    # prepare training data to fit lasso model
+    X_train = X_train.fillna(0)
+
     return X_train, X_val
 
 
@@ -56,22 +62,30 @@ if __name__ == "__main__":
     X_train, Y_train, X_val, Y_val = load_train_and_validation()
     X_train, X_val = preprocess(X_train, X_val)
 
-    # chosen via results of hparam optimization search
+    lass_feat_selector = feature_selection.SelectFromModel(
+        estimator=linear_model.Lasso(alpha=0.001)
+    ).fit(X_train, Y_train)
+    selected_feats = list(lass_feat_selector.get_feature_names_out())
+
+    # new training and validation data with the selected features
+    X_train_lasso, X_val_lasso = X_train[selected_feats], X_val[selected_feats]
+
+    # chosen via results of hparam optimization search on the selected features using Lasso
     params = {
-        "max_depth": 1,
-        "n_estimators": 275,
-        "learning_rate": 0.1,
-        "gamma": 0.1,
+        "max_depth": 5,
+        "n_estimators": 495,
+        "learning_rate": 0.062,
+        "gamma": 0.184,
         "objective": "binary:logistic",
         "eval_metric": "logloss",
         "use_label_encoder": False,
     }
 
     clf = xgb.XGBClassifier(**params)
-    clf.fit(X_train, Y_train)
+    clf.fit(X_train_lasso, Y_train)
 
-    y_pred = clf.predict(X_val)
-    y_proba = clf.predict_proba(X_val)[:, 1]
+    y_pred = clf.predict(X_val_lasso)
+    y_proba = clf.predict_proba(X_val_lasso)[:, 1]
     res = pd.DataFrame({"y_true": Y_val, "y_preds": y_pred, "y_proba": y_proba})
 
     # saving predictions
@@ -83,6 +97,6 @@ if __name__ == "__main__":
     perf_metrics = clf_performance_metrics(Y_val, y_pred, y_proba, verbose=True)
 
     comet_exp = log_experiment(
-        {**params, **EXP_PARAMS}, perf_metrics, X_train, exp_name=EXP_NAME
+        {**params, **EXP_PARAMS}, perf_metrics, X_train_lasso, exp_name=EXP_NAME
     )
     register_model(clf, comet_exp, f"./models/{EXP_NAME}.pickle")

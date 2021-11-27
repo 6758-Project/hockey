@@ -63,7 +63,7 @@ def generate_shot_classifier_charts(
 
     fig.suptitle(title, fontsize=16)
     fig.tight_layout()
-    fig.savefig(os.path.join(image_dir, f'{title}.png'), bbox_inches='tight')
+    fig.savefig(os.path.join(image_dir, f'{title}.png'), bbox_inches='tight', dpi=300)
 
 
 def roc_auc_curve(
