@@ -17,7 +17,7 @@ from sklearn import metrics
 import logging
 import pandas as pd
 import matplotlib.pyplot as plt
-from generate_figures_mod import generate_adv_model_figures 
+from generate_figures import generate_adv_model_figures 
 from collections import ChainMap
 
 from utils import (
