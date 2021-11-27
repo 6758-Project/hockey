@@ -17,44 +17,21 @@ from generate_figures_mod import generate_adv_model_figures
 
 
 from utils import (
-    EXP_KWARGS, 
+    EXP_KWARGS, TRAIN_COLS_PART_4, INFREQUENT_STOPPAGE_EVENTS,TRAIN_COLS_BASIC,LABEL_COL,RANDOM_STATE,
     clf_performance_metrics, log_experiment, register_model
 )
-
-TRAIN_COLS_PART_4 = [
-    'game_sec', 'period',
-    'secondary_type',
-    'coordinate_x', 'coordinate_y', 'distance_from_net', 'angle',
-    'prev_event_type', 'angle_between_prev_event', 'distance_from_prev_event', 'prev_event_time_diff',
-    'speed', 'is_rebound', 'rebound_angle', 'is_empty_net'
-] 
-
-INFREQUENT_STOPPAGE_EVENTS = [
-    'PERIOD_START', 'PERIOD_READY', 'PERIOD_END', 'SHOOTOUT_COMPLETE', 'PERIOD_OFFICIAL', 'GAME_OFFICIAL', 'PENALTY', 'GOAL', 'CHALLENGE'
-]
 
 EXP_PARAMS = {
     "model_type": "Multi-layer Perceptron",
 }
 
-TRAIN_COLS_BASIC = [
-    'period', 'goals_home', 'goals_away',
-    'shooter_id', 'coordinate_x', 'coordinate_y', 'distance_from_net',
-    'angle'
-]
 
-LABEL_COL = 'is_goal'
-
-RANDOM_STATE = 1729
 
 
 def load_train_and_validation():
     
     train = pd.read_csv("./data/processed/train_processed.csv")
     val = pd.read_csv("./data/processed/validation_processed.csv")
-
-    na_mask = train[TRAIN_COLS_PART_4+[LABEL_COL]].fillna(0)
-    val = val[TRAIN_COLS_PART_4+[LABEL_COL]].fillna(0)
     
     X_train, Y_train =  train[TRAIN_COLS_PART_4], train[LABEL_COL].astype(int)
     X_val, Y_val = val[TRAIN_COLS_PART_4], val[LABEL_COL].astype(int)
@@ -78,9 +55,7 @@ def preprocess(X_train, X_val):
 
     X_train = pd.get_dummies(X_train, ['shot', 'prev_event'])
     X_val = pd.get_dummies(X_val,['shot', 'prev_event'])
-    
-    X_val = X_val[X_train.columns]
-    
+       
     
     scaler = sklearn.preprocessing.StandardScaler().fit(X_train.values)
 
@@ -95,7 +70,7 @@ def preprocess(X_train, X_val):
         index=X_val.index,
         columns=X_val.columns
     )
-           
+    
     X_train_scaled=X_train_scaled.fillna(0)
     X_val_scaled=X_val_scaled.fillna(0)
     

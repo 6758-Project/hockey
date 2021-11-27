@@ -16,7 +16,7 @@ from generate_figures_mod import generate_adv_model_figures
 
 
 from utils import (
-    EXP_KWARGS,
+    EXP_KWARGS,LABEL_COL,RANDOM_STATE,
     clf_performance_metrics, log_experiment, register_model,
 )
 
@@ -26,29 +26,13 @@ EXP_PARAMS = {
     "model_type": "Multi-layer Perceptron",
 }
 
-TRAIN_COLS_BASIC = [
-    'period', 'goals_home', 'goals_away',
-    'shooter_id', 'coordinate_x', 'coordinate_y', 'distance_from_net',
-    'angle'
-]
 
-LABEL_COL = 'is_goal'
-
-RANDOM_STATE = 1729
 
 
 def load_train_and_validation():
     
     train = pd.read_csv("./data/processed/train_processed.csv")
     val = pd.read_csv("./data/processed/validation_processed.csv")
-
-    na_mask = train[TRAIN_COLS_BASELINE+[LABEL_COL]].isnull().any(axis=1)
-    logging.info(f"dropping {na_mask.sum()} rows (of {len(train)} total) containing nulls from train")
-    train = train[~na_mask]
-
-    na_mask = val[TRAIN_COLS_BASELINE+[LABEL_COL]].isnull().any(axis=1)
-    logging.info(f"dropping {na_mask.sum()} rows (of {len(val)} total) containing nulls from val")
-    val = val[~na_mask]
 
     X_train = train[TRAIN_COLS_BASELINE]
     Y_train = train[LABEL_COL].astype(int)
@@ -74,8 +58,10 @@ def preprocess(X_train, X_val):
         columns=X_val.columns
     )
 
+    X_train_scaled=X_train_scaled.fillna(0)
+    X_val_scaled=X_val_scaled.fillna(0)
+    
     return X_train_scaled, X_val_scaled
-
 
 
 
