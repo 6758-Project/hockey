@@ -12,10 +12,7 @@ import pandas as pd
 from visuals import generate_shot_classifier_charts
 
 
-def generate_adv_model_figures():
-    experiment_prediction_filenames = {
-        "xgb_distance_and_angle_only": "./models/predictions/xgboost_distance_angle_only.csv"
-    }
+def generate_adv_model_figures(experiment_prediction_filenames=None , title = "Default", image_dir = "./"):
 
     exp_preds = {exp: pd.read_csv(fname) for exp, fname in experiment_prediction_filenames.items()}
 
@@ -39,4 +36,25 @@ def generate_adv_model_figures():
 
 if __name__ == '__main__':
 
-    generate_adv_model_figures()
+    exp_pred_filenames = {
+        "xgb_distance_and_angle_only": "./models/predictions/xgboost_distance_angle_only.csv"
+    }
+    title = "Visual Summary - XGBoost Models"
+    image_dir = "./figures/advanced_models/"
+    generate_adv_model_figures(
+        experiment_prediction_filenames = exp_pred_filenames,
+        title=title, image_dir=image_dir
+    )
+
+    exp_pred_filenames = {
+        "NN_distance": "./models/predictions/NN_distance.csv",
+        "NN_baseline":"./models/predictions/NN_baseline.csv",
+        "NN_basic":"./models/predictions/NN_basic.csv",
+        "NN_adv":"./models/predictions/NN_adv.csv"
+    }
+    title = "Visual Summary - Neural Network Models"
+    image_dir = "./figures/exploration/"
+    generate_adv_model_figures(
+        experiment_prediction_filenames = exp_pred_filenames,
+        title=title, image_dir=image_dir
+    )

@@ -1,6 +1,8 @@
 import argparse
 import logging
 
+logging.basicConfig(level = logging.INFO)
+
 import pandas as pd
 import numpy as np
 
@@ -11,20 +13,11 @@ from sklearn.linear_model import LogisticRegression
 
 
 from visuals import generate_shot_classifier_charts
-from utils import clf_performance_metrics, log_experiment, register_model
+from utils import (
+    clf_performance_metrics, log_experiment, register_model,
+    TRAIN_COLS_BASIC, LABEL_COL, RANDOM_STATE
+)
 
-
-logging.basicConfig(level = logging.INFO)
-
-TRAIN_COLS_BASIC = [
-    'period', 'goals_home', 'goals_away',
-    'shooter_id', 'coordinate_x', 'coordinate_y', 'distance_from_net',
-    'angle'
-]
-
-LABEL_COL = 'is_goal'
-
-RANDOM_STATE = 1729
 
 EXP_PARAMS = {
     "random_state": RANDOM_STATE,
@@ -33,7 +26,6 @@ EXP_PARAMS = {
 }
 
 
-# Load training and validation data from the pre-determined location.
 def load_train_and_validation():
     train = pd.read_csv("./data/processed/train_processed.csv")
     val = pd.read_csv("./data/processed/validation_processed.csv")
@@ -55,7 +47,6 @@ def load_train_and_validation():
     return X_train, Y_train, X_val, Y_val
 
 
-# Preprocess the features using z-score scaling
 def preprocess(X_train, X_val):
     scaler = sklearn.preprocessing.StandardScaler().fit(X_train.values)
 
@@ -82,7 +73,6 @@ def main(args):
     exp_names = ['logistic_regression_'+sub for sub in ['distance_only', 'angle_only', 'distance_and_angle']]
     col_subsets = [['distance_from_net'], ['angle'], ['distance_from_net', 'angle']]
 
-    # Exploring the 3 different sets of features as instructed
     for exp_name, subset in zip(exp_names, col_subsets):
         logging.info(f"Processing {exp_name}...")
         X_train_sub = X_train[subset].values
@@ -116,8 +106,6 @@ def main(args):
     y_pred = (y_proba >=0.5).astype(int)
     y_preds.append(y_pred)
 
-
-    # Generate the images if commanded
     if args.generate_charts:
         title = "Visual Summary - Simple Logistic Regressions"
         image_dir = "./figures/baseline_models/"
