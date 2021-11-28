@@ -83,7 +83,6 @@ if __name__ == "__main__":
     # the redundant features after inspecting them in "./notebooks/M2_detect-feat-correlation.ipynb"
     redundant_feats = [
         "is_rebound",
-        "prev_event_x_coord",
         "coordinate_y",
         "coordinate_x",
         "period",
