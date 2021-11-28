@@ -28,8 +28,6 @@ def generate_adv_model_figures(
         y_preds.append(preds["y_preds"].values)
         y_probas.append(preds["y_proba"].values)
 
-    title = "Visual Summary - XGBoost Models"
-    image_dir = "./figures/advanced_models/"
 
     generate_shot_classifier_charts(
         y_trues, y_preds, y_probas, exp_names, title=title, image_dir=image_dir
@@ -79,3 +77,34 @@ if __name__ == "__main__":
         title=title,
         image_dir=image_dir,
     )
+
+    
+    testset_pred_filenames = {
+        "logistic_regression_distance_only": "./models/predictions/Testset_Eval_Reg_logistic_regression_distance_only.csv",
+        "logistic_regression_angle_only": "./models/predictions/Testset_Eval_Reg_logistic_regression_angle_only.csv",
+        "logistic_regression_distance_and_angle": "./models/predictions/Testset_Eval_Reg_logistic_regression_distance_and_angle.csv",
+        "xgboost_SHAP": "./models/predictions/Test_Reg_xgboost_SHAP.csv",
+        "NN_adv": "./models/predictions/Test_Reg_NN_adv.csv",
+    }
+    title = "Visual Summary - Models Performance Comparison_Reg"
+    image_dir = "./figures/Test_Evaluation/"
+    generate_adv_model_figures(
+        experiment_prediction_filenames=testset_pred_filenames,
+        title=title,
+        image_dir=image_dir,
+    )
+    
+    testset_pred_filenames = {
+        "logistic_regression_distance_only": "./models/predictions/Testset_Eval_Post_logistic_regression_distance_only.csv",
+        "logistic_regression_angle_only": "./models/predictions/Testset_Eval_Post_logistic_regression_angle_only.csv",
+        "logistic_regression_distance_and_angle": "./models/predictions/Testset_Eval_Post_logistic_regression_distance_and_angle.csv",
+        "xgboost_SHAP": "./models/predictions/Test_Post_xgboost_SHAP.csv",
+        "NN_adv": "./models/predictions/Test_Post_NN_adv.csv",
+    }
+    title = "Visual Summary - Models Performance Comparison_Post"
+    image_dir = "./figures/Test_Evaluation/"
+    generate_adv_model_figures(
+        experiment_prediction_filenames=testset_pred_filenames,
+        title=title,
+        image_dir=image_dir,
+    )   
