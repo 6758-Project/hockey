@@ -129,9 +129,70 @@ def add_milestone2_advanced_metrics(events_df):
     PowerPlayTimerHome = 0
     PowerPlayTimerGuest = 0
 
+    PreEvent_Home_Skaters = 0
+    PreEvent_Guest_Skaters = 0
+    PreEvent_PowerPlayTimerHome = 0
+    PreEvent_PowerPlayTimerGuest = 0
+    
     # Loop through all rows, not efficient, better method investigating
     for i in range(events_df.shape[0]):
 
+        # Always update penalty timer, remove expired ones
+        Home_minor_exp_end = Home_minor_exp_end[Home_minor_exp_end > events_df.at[i,"game_sec"]]
+        Home_DM_exp_end = Home_DM_exp_end[Home_DM_exp_end > events_df.at[i,"game_sec"]]
+        Home_major_exp_end = Home_major_exp_end[Home_major_exp_end > events_df.at[i,"game_sec"]]
+
+        Guest_minor_exp_end = Guest_minor_exp_end[Guest_minor_exp_end > events_df.at[i,"game_sec"]]
+        Guest_DM_exp_end = Guest_DM_exp_end[Guest_DM_exp_end > events_df.at[i,"game_sec"]]
+        Guest_major_exp_end = Guest_major_exp_end[Guest_major_exp_end > events_df.at[i,"game_sec"]] 
+        
+        # Number of friendly non-goalie skaters right before the event
+        if (Home_minor_exp_end.size + Home_DM_exp_end.size + Home_major_exp_end.size) > 2:
+            PreEvent_Home_Skaters = 3
+        else:
+            PreEvent_Home_Skaters = 5 - (Home_minor_exp_end.size + Home_DM_exp_end.size + Home_major_exp_end.size)
+        
+        # 10. Number of opposing non-goalie skaters
+        if (Guest_minor_exp_end.size + Guest_DM_exp_end.size + Guest_major_exp_end.size) > 2:
+            PreEvent_Guest_Skaters = 3
+        else:
+            PreEvent_Guest_Skaters = 5 - (Guest_minor_exp_end.size + Guest_DM_exp_end.size + Guest_major_exp_end.size)        
+        
+
+        # Powerplay timer before the event for home team 
+        if ((PreEvent_Home_Skaters <= PreEvent_Guest_Skaters)):   
+            Home_power_startstamp = events_df.at[i,"game_sec"]
+            HomeTeamPowerPlayFlag = 0
+        
+        # Powerplay timer before the event for guest team   
+        if ((PreEvent_Guest_Skaters <= PreEvent_Home_Skaters)):  
+            Guest_power_startstamp = events_df.at[i,"game_sec"]
+            GuestTeamPowerPlayFlag = 0
+                  
+        PreEvent_PowerPlayTimerHome = events_df.at[i,"game_sec"] - Home_power_startstamp
+        PreEvent_PowerPlayTimerGuest = events_df.at[i,"game_sec"] - Guest_power_startstamp   
+        
+        
+        
+        if (events_df.at[i,"shooter_team_name"]==events_df.at[i,"home_team"]):
+            events_df.at[i,'friendly_skaters'] = PreEvent_Home_Skaters
+            events_df.at[i,'opposing_skaters'] = PreEvent_Guest_Skaters
+            if (PreEvent_Home_Skaters > PreEvent_Guest_Skaters):
+                events_df.at[i,'power_play_time_elapsed'] = PreEvent_PowerPlayTimerHome
+        elif (events_df.at[i,"shooter_team_name"]==events_df.at[i,"away_team"]):
+            events_df.at[i,'friendly_skaters'] = PreEvent_Guest_Skaters
+            events_df.at[i,'opposing_skaters'] = PreEvent_Home_Skaters
+            if (PreEvent_Guest_Skaters > PreEvent_Home_Skaters):
+                events_df.at[i,'power_play_time_elapsed'] = PreEvent_PowerPlayTimerGuest 
+        else:
+            events_df.at[i,'friendly_skaters'] = np.nan
+            events_df.at[i,'opposing_skaters'] = np.nan            
+            events_df.at[i,'power_play_time_elapsed'] = np.nan
+        
+        
+        
+        
+        
         # Guest team got a penalty, home team powerplay
         if (events_df.at[i,"type"]=="PENALTY") and (events_df.at[i,"shooter_team_name"]==events_df.at[i,"away_team"]):
 
@@ -195,15 +256,6 @@ def add_milestone2_advanced_metrics(events_df):
                 Guest_DM_exp_end[:] = (2*60) + events_df.at[i,"game_sec"]
         
         
-        # Always update penalty timer, remove expired ones
-        Home_minor_exp_end = Home_minor_exp_end[Home_minor_exp_end > events_df.at[i,"game_sec"]]
-        Home_DM_exp_end = Home_DM_exp_end[Home_DM_exp_end > events_df.at[i,"game_sec"]]
-        Home_major_exp_end = Home_major_exp_end[Home_major_exp_end > events_df.at[i,"game_sec"]]
-
-        Guest_minor_exp_end = Guest_minor_exp_end[Guest_minor_exp_end > events_df.at[i,"game_sec"]]
-        Guest_DM_exp_end = Guest_DM_exp_end[Guest_DM_exp_end > events_df.at[i,"game_sec"]]
-        Guest_major_exp_end = Guest_major_exp_end[Guest_major_exp_end > events_df.at[i,"game_sec"]]   
-        
             
         # Update skater number
         # 9. Number of friendly non-goalie skaters
@@ -217,7 +269,7 @@ def add_milestone2_advanced_metrics(events_df):
             Guest_Skaters = 3
         else:
             Guest_Skaters = 5 - (Guest_minor_exp_end.size + Guest_DM_exp_end.size + Guest_major_exp_end.size)
-
+        
 
         # Update the power play timer
         # If the guest team has a player advantage, start the power play 
@@ -235,27 +287,8 @@ def add_milestone2_advanced_metrics(events_df):
         elif ((Guest_Skaters <= Home_Skaters)):  
             Guest_power_startstamp = events_df.at[i,"game_sec"]
             GuestTeamPowerPlayFlag = 0
-                  
-        PowerPlayTimerHome = events_df.at[i,"game_sec"] - Home_power_startstamp
-        PowerPlayTimerGuest = events_df.at[i,"game_sec"] - Guest_power_startstamp   
-        
-        
-        if (events_df.at[i,"shooter_team_name"]==events_df.at[i,"home_team"]):
-            events_df.at[i,'friendly_skaters'] = Home_Skaters
-            events_df.at[i,'opposing_skaters'] = Guest_Skaters
-            if (Home_Skaters > Guest_Skaters):
-                events_df.at[i,'power_play_time_elapsed'] = PowerPlayTimerHome
-        elif (events_df.at[i,"shooter_team_name"]==events_df.at[i,"away_team"]):
-            events_df.at[i,'friendly_skaters'] = Guest_Skaters
-            events_df.at[i,'opposing_skaters'] = Home_Skaters
-            if (Guest_Skaters > Home_Skaters):
-                events_df.at[i,'power_play_time_elapsed'] = PowerPlayTimerGuest 
-        else:
-            events_df.at[i,'friendly_skaters'] = np.nan
-            events_df.at[i,'opposing_skaters'] = np.nan            
-            events_df.at[i,'power_play_time_elapsed'] = np.nan 
-         
-        
+                      
+
     return events_df
 
 
