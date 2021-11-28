@@ -28,7 +28,6 @@ def generate_adv_model_figures(
         y_preds.append(preds["y_preds"].values)
         y_probas.append(preds["y_proba"].values)
 
-
     generate_shot_classifier_charts(
         y_trues, y_preds, y_probas, exp_names, title=title, image_dir=image_dir
     )
@@ -41,6 +40,7 @@ if __name__ == "__main__":
         "xgboost_optimal": "./models/predictions/xgboost_optimal.csv",
         "xgboost_lasso": "./models/predictions/xgboost_lasso.csv",
         "xgboost_shap": "./models/predictions/xgboost_SHAP.csv",
+        "xgboost_feats_non_corr": "./models/predictions/xgboost_feats_non_corr.csv",
 
     }
     title = "Visual Summary - XGBoost Models"
@@ -69,6 +69,7 @@ if __name__ == "__main__":
     best_exp_pred_filenames = {
     	"xgboost_lasso": "./models/predictions/xgboost_lasso.csv",
         "NN_adv": "./models/predictions/NN_adv.csv",
+        "xgboost_feats_non_corr": "./models/predictions/xgboost_feats_non_corr.csv",
     }
     title = "Visual Summary - Best Performers"
     image_dir = "./figures/advanced_models/"
