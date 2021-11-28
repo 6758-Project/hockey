@@ -123,6 +123,11 @@ def add_milestone2_advanced_metrics(events_df):
 
     HomeTeamPowerPlayFlag = 0
     GuestTeamPowerPlayFlag = 0
+    
+    Home_Skaters = 0
+    Guest_Skaters = 0
+    PowerPlayTimerHome = 0
+    PowerPlayTimerGuest = 0
 
     # Loop through all rows, not efficient, better method investigating
     for i in range(events_df.shape[0]):
@@ -203,36 +208,49 @@ def add_milestone2_advanced_metrics(events_df):
         # Update skater number
         # 9. Number of friendly non-goalie skaters
         if (Home_minor_exp_end.size + Home_DM_exp_end.size + Home_major_exp_end.size) > 2:
-            events_df.at[i,'Home_Skaters'] = 3
+            Home_Skaters = 3
         else:
-            events_df.at[i,'Home_Skaters'] = 5 - (Home_minor_exp_end.size + Home_DM_exp_end.size + Home_major_exp_end.size)
+            Home_Skaters = 5 - (Home_minor_exp_end.size + Home_DM_exp_end.size + Home_major_exp_end.size)
         
         # 10. Number of opposing non-goalie skaters
         if (Guest_minor_exp_end.size + Guest_DM_exp_end.size + Guest_major_exp_end.size) > 2:
-            events_df.at[i,'Guest_Skaters'] = 3
+            Guest_Skaters = 3
         else:
-            events_df.at[i,'Guest_Skaters'] = 5 - (Guest_minor_exp_end.size + Guest_DM_exp_end.size + Guest_major_exp_end.size)
+            Guest_Skaters = 5 - (Guest_minor_exp_end.size + Guest_DM_exp_end.size + Guest_major_exp_end.size)
 
 
         # Update the power play timer
         # If the guest team has a player advantage, start the power play 
-        if (events_df.at[i,'Home_Skaters'] > events_df.at[i,'Guest_Skaters']) and (HomeTeamPowerPlayFlag == 0):
+        if (Home_Skaters > Guest_Skaters) and (HomeTeamPowerPlayFlag == 0):
             Home_power_startstamp = events_df.at[i,"game_sec"]
             HomeTeamPowerPlayFlag = 1
-        elif ((events_df.at[i,'Home_Skaters'] <= events_df.at[i,'Guest_Skaters'])):   
+        elif ((Home_Skaters <= Guest_Skaters)):   
             Home_power_startstamp = events_df.at[i,"game_sec"]
             HomeTeamPowerPlayFlag = 0
         
         # If the home team has a player advantage, start the power play   
-        if (events_df.at[i,'Guest_Skaters'] > events_df.at[i,'Home_Skaters']) and (GuestTeamPowerPlayFlag == 0):
+        if (Guest_Skaters > Home_Skaters) and (GuestTeamPowerPlayFlag == 0):
             Guest_power_startstamp = events_df.at[i,"game_sec"]
             GuestTeamPowerPlayFlag = 1
-        elif ((events_df.at[i,'Guest_Skaters'] <= events_df.at[i,'Home_Skaters'])):  
+        elif ((Guest_Skaters <= Home_Skaters)):  
             Guest_power_startstamp = events_df.at[i,"game_sec"]
             GuestTeamPowerPlayFlag = 0
                   
-        events_df.at[i,"PowerPlayTimerHome"] = events_df.at[i,"game_sec"] - Home_power_startstamp
-        events_df.at[i,"PowerPlayTimerGuest"] = events_df.at[i,"game_sec"] - Guest_power_startstamp   
+        PowerPlayTimerHome = events_df.at[i,"game_sec"] - Home_power_startstamp
+        PowerPlayTimerGuest = events_df.at[i,"game_sec"] - Guest_power_startstamp   
+        
+        
+        if (events_df.at[i,"shooter_team_name"]==events_df.at[i,"home_team"]):
+            events_df.at[i,'friendly_skaters'] = Home_Skaters
+            events_df.at[i,'opposing_skaters'] = Guest_Skaters
+        elif (events_df.at[i,"shooter_team_name"]==events_df.at[i,"away_team"]):
+            events_df.at[i,'friendly_skaters'] = Guest_Skaters
+            events_df.at[i,'opposing_skaters'] = Home_Skaters
+        else:
+            events_df.at[i,'friendly_skaters'] = np.nan
+            events_df.at[i,'opposing_skaters'] = np.nan            
+            
+        events_df.at[i,'power_play_time_elapsed'] = np.maximum(PowerPlayTimerHome,PowerPlayTimerGuest)
         
     return events_df
 
