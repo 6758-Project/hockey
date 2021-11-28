@@ -150,11 +150,6 @@ def main(args):
                 image_dir = "./figures/Test_Evaluation/"
                 generate_adv_model_figures(exp_pred_filename, Model_Param["Name"]+ "_" + Season , image_dir)
 
-            if args.log_results:
-                comet_exp = log_experiment(
-                    Model_Param, perf_metrics, X_Processed, Model_Param["CometModelName"]+"_"+Season
-                )
-
         experiment_prediction_filenames = dict(ChainMap(*experiment_prediction_filenames))
         title = "Visual Summary - Models Performance Comparison" + "_" + Season 
         image_dir = "./figures/Test_Evaluation/"
@@ -167,16 +162,7 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--generate-charts', dest="generate_charts",
                     help='(boolean) if passed, generate model visuals',
                     action='store_true')
-    parser.set_defaults(generate_charts=False)
-
-    parser.add_argument(
-        "-l",
-        "--log-results",
-        dest="log_results",
-        help="(boolean) if passed, logs model parameters and performance metrics to Comet.ml",
-        action="store_true",
-    )
-    parser.set_defaults(log_results=False)    
+    parser.set_defaults(generate_charts=False)   
     
     args = parser.parse_args()
 
