@@ -243,14 +243,18 @@ def add_milestone2_advanced_metrics(events_df):
         if (events_df.at[i,"shooter_team_name"]==events_df.at[i,"home_team"]):
             events_df.at[i,'friendly_skaters'] = Home_Skaters
             events_df.at[i,'opposing_skaters'] = Guest_Skaters
+            if (Home_Skaters > Guest_Skaters):
+                events_df.at[i,'power_play_time_elapsed'] = PowerPlayTimerHome
         elif (events_df.at[i,"shooter_team_name"]==events_df.at[i,"away_team"]):
             events_df.at[i,'friendly_skaters'] = Guest_Skaters
             events_df.at[i,'opposing_skaters'] = Home_Skaters
+            if (Guest_Skaters > Home_Skaters):
+                events_df.at[i,'power_play_time_elapsed'] = PowerPlayTimerGuest 
         else:
             events_df.at[i,'friendly_skaters'] = np.nan
             events_df.at[i,'opposing_skaters'] = np.nan            
-            
-        events_df.at[i,'power_play_time_elapsed'] = np.maximum(PowerPlayTimerHome,PowerPlayTimerGuest)
+            events_df.at[i,'power_play_time_elapsed'] = np.nan 
+         
         
     return events_df
 
