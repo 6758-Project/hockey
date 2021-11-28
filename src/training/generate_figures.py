@@ -28,8 +28,6 @@ def generate_adv_model_figures(
         y_preds.append(preds["y_preds"].values)
         y_probas.append(preds["y_proba"].values)
 
-    title = "Visual Summary - XGBoost Models"
-    image_dir = "./figures/advanced_models/"
 
     generate_shot_classifier_charts(
         y_trues, y_preds, y_probas, exp_names, title=title, image_dir=image_dir
