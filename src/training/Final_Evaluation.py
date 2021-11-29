@@ -45,7 +45,7 @@ MODELINFO_A = {
     "model_type": "logreg",
     "Name": "Logistic Regression Distance Only", 
     "CometModelName": "logistic-regression-distance-only",
-    "Version": "1.0.1",
+    "Version": "1.0.2",
     "FileName": "logistic_regression_distance_only",
     "Col": TRAIN_COLS_DISTANCE
 }
@@ -53,7 +53,7 @@ MODELINFO_B = {
     "model_type": "logreg",
     "Name": "Logistic Regression Angle Only", 
     "CometModelName": "logistic-regression-angle-only",
-    "Version": "1.0.1",
+    "Version": "1.0.3",
     "FileName": "logistic_regression_angle_only",
     "Col": TRAIN_COLS_ANGLE
 }
@@ -61,23 +61,23 @@ MODELINFO_C = {
     "model_type": "logreg",
     "Name": "Logistic Regression Distance and Angle", 
     "CometModelName": "logistic-regression-distance-and-angle",
-    "Version": "1.0.1",
+    "Version": "1.0.2",
     "FileName": "logistic_regression_distance_and_angle",
     "Col": TRAIN_COLS_BASELINE
 }
 MODELINFO_D = {
     "model_type": "xgboost",
-    "Name": "XGBoost Model with SHAP", 
-    "CometModelName": "xgboost-shap", 
-    "Version": "1.0.0",
-    "FileName": "xgboost_SHAP" ,
+    "Name": "XGBoost Model with Lasso", 
+    "CometModelName": "xgboost-lasso", 
+    "Version": "1.0.1",
+    "FileName": "xgboost_lasso" ,
     "Col": TRAIN_COLS_PART_4
 }
 MODELINFO_E = {
     "model_type": "NN_MLP",
     "Name": "Neural Network - Advance Features", 
     "CometModelName": "nn-adv",
-    "Version": "1.0.0", 
+    "Version": "1.0.1", 
     "FileName": "NN_adv",
     "Col": TRAIN_COLS_PART_4
 }
