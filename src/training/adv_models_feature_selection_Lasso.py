@@ -66,6 +66,11 @@ if __name__ == "__main__":
         estimator=linear_model.Lasso(alpha=0.001)
     ).fit(X_train, Y_train)
     selected_feats = list(lass_feat_selector.get_feature_names_out())
+    lasso_selected_feats = pd.DataFrame({"lasso_selected_feats": selected_feats})
+    lasso_selected_feats_path = f"./models/"
+    if not os.path.exists(lasso_selected_feats_path):
+        os.makedirs(lasso_selected_feats_path)
+    lasso_selected_feats.to_csv(os.path.join(lasso_selected_feats_path, f"{EXP_NAME}_lasso_feats.csv"), index=False)
 
     # new training and validation data with the selected features
     X_train_lasso, X_val_lasso = X_train[selected_feats], X_val[selected_feats]
@@ -98,11 +103,11 @@ if __name__ == "__main__":
         Y_val, y_pred, y_proba, verbose=True
     )
 
-    comet_exp = log_experiment(
-        {**params, **EXP_PARAMS},
-        perf_metrics,
-        X_train_lasso,
-        confusion_matrix=confusion_matrix,
-        exp_name=EXP_NAME,
-    )
-    register_model(clf, comet_exp, f"./models/{EXP_NAME}.pickle")
+    # comet_exp = log_experiment(
+    #     {**params, **EXP_PARAMS},
+    #     perf_metrics,
+    #     X_train_lasso,
+    #     confusion_matrix=confusion_matrix,
+    #     exp_name=EXP_NAME,
+    # )
+    # register_model(clf, comet_exp, f"./models/{EXP_NAME}.pickle")
