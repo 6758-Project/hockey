@@ -1,8 +1,6 @@
+import os
 import argparse
 import logging
-
-logging.basicConfig(level=logging.INFO)
-
 import pandas as pd
 import numpy as np
 
@@ -11,8 +9,6 @@ import comet_ml
 import sklearn
 from sklearn.linear_model import LogisticRegression
 
-
-from visuals import generate_shot_classifier_charts
 from utils import (
     clf_performance_metrics,
     log_experiment,
@@ -20,14 +16,24 @@ from utils import (
     TRAIN_COLS_BASIC,
     LABEL_COL,
     RANDOM_STATE,
+    INFREQUENT_STOPPAGE_EVENTS,
 )
 
+logging.basicConfig(level=logging.INFO)
 
 EXP_PARAMS = {
     "random_state": RANDOM_STATE,
     "model_type": "logreg",
     "scaler": "standard",
 }
+
+
+col_subsets = [["distance_from_net"], ["angle"], ["distance_from_net", "angle"]]
+
+
+BASELINE_EXP_NAMES = [
+    "LR_" + sub for sub in ["distance_only", "angle_only", "distance_and_angle"]
+]
 
 
 def load_train_and_validation():
@@ -75,15 +81,22 @@ def main(args):
     X_train, Y_train, X_val, Y_val = load_train_and_validation()
     X_train, X_val = preprocess(X_train, X_val)
 
-    y_trues, y_preds, y_probas = [], [], []
-    exp_names = [
-        "logistic_regression_" + sub
-        for sub in ["distance_only", "angle_only", "distance_and_angle"]
-    ]
-    col_subsets = [["distance_from_net"], ["angle"], ["distance_from_net", "angle"]]
+    # The random classifier
+    np.random.seed(RANDOM_STATE)
+    y_proba = np.random.uniform(low=0, high=1, size=len(Y_val))
+    y_pred = (y_proba >= 0.5).astype(int)
+    res = pd.DataFrame({"y_true": Y_val, "y_preds": y_pred, "y_proba": y_proba})
 
-    for exp_name, subset in zip(exp_names, col_subsets):
+    # saving predictions
+    preds_path = f"./models/predictions/"
+    if not os.path.exists(preds_path):
+        os.makedirs(preds_path)
+    res.to_csv(os.path.join(preds_path, f"random_classifier.csv"), index=False)
+
+    # the other 3 LR baselines
+    for exp_name, subset in zip(BASELINE_EXP_NAMES, col_subsets):
         logging.info(f"Processing {exp_name}...")
+
         X_train_sub = X_train[subset].values
         X_val_sub = X_val[subset].values
 
@@ -91,9 +104,12 @@ def main(args):
         y_pred = clf.predict(X_val_sub)
         y_proba = clf.predict_proba(X_val_sub)[:, 1]
 
-        y_trues.append(Y_val)
-        y_preds.append(y_pred)
-        y_probas.append(y_proba)
+        res = pd.DataFrame({"y_true": Y_val, "y_preds": y_pred, "y_proba": y_proba})
+        # saving predictions
+        preds_path = f"./models/predictions/"
+        if not os.path.exists(preds_path):
+            os.makedirs(preds_path)
+        res.to_csv(os.path.join(preds_path, f"{exp_name}.csv"), index=False)
 
         perf_metrics, confusion_matrix = clf_performance_metrics(
             Y_val, y_pred, y_proba, verbose=True
@@ -113,35 +129,9 @@ def main(args):
                 pickle_path = f"./models/{exp_name}.pickle"
                 register_model(clf, comet_exp, pickle_path)
 
-    # Adding the random baseline
-    exp_names.append("baseline (uniform random)")
-    y_trues.append(Y_val)
-    np.random.seed(RANDOM_STATE)
-    y_proba = np.random.uniform(low=0, high=1, size=len(Y_val))
-    y_probas.append(y_proba)
-    y_pred = (y_proba >= 0.5).astype(int)
-    y_preds.append(y_pred)
-
-    if args.generate_charts:
-        title = "Visual Summary - Simple Logistic Regressions"
-        image_dir = "./figures/baseline_models/"
-
-        generate_shot_classifier_charts(
-            y_trues, y_preds, y_probas, exp_names, title=title, image_dir=image_dir
-        )
-
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Baseline Models")
-
-    parser.add_argument(
-        "-c",
-        "--generate-charts",
-        dest="generate_charts",
-        help="(boolean) if passed, generate model visuals",
-        action="store_true",
-    )
-    parser.set_defaults(generate_charts=False)
+    parser = argparse.ArgumentParser(description="Logistic Regression models")
 
     parser.add_argument(
         "-l",

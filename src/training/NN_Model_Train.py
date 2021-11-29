@@ -153,7 +153,9 @@ def main(args):
 
         res.to_csv(f"./models/predictions/{exp_name}.csv", index=False)
 
-        perf_metrics = clf_performance_metrics(Y_val, y_pred, y_proba, verbose=True)
+        perf_metrics, confusion_matrix = clf_performance_metrics(
+            Y_val, y_pred, y_proba, verbose=True
+        )
 
         experiment_prediction_filenames.append(exp_pred_filename)
 
@@ -163,8 +165,13 @@ def main(args):
 
         if args.log_results:
             comet_exp = log_experiment(
-                EXP_PARAMS, perf_metrics, X_train_scaled, exp_name
+                {**params, **EXP_PARAMS},
+                perf_metrics,
+                X_train_scaled,
+                confusion_matrix=confusion_matrix,
+                exp_name=exp_name,
             )
+
             if args.register_models:
                 pickle_path = f"./models/{exp_name}.pickle"
                 register_model(clf, comet_exp, pickle_path)

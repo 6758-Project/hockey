@@ -80,9 +80,15 @@ if __name__ == "__main__":
         os.makedirs(preds_path)
     res.to_csv(os.path.join(preds_path, f"{EXP_NAME}.csv"), index=False)
 
-    perf_metrics = clf_performance_metrics(Y_val, y_pred, y_proba, verbose=True)
+    perf_metrics, confusion_matrix = clf_performance_metrics(
+        Y_val, y_pred, y_proba, verbose=True
+    )
 
     comet_exp = log_experiment(
-        {**params, **EXP_PARAMS}, perf_metrics, X_train, exp_name=EXP_NAME
+        {**params, **EXP_PARAMS},
+        perf_metrics,
+        X_train,
+        confusion_matrix=confusion_matrix,
+        exp_name=EXP_NAME,
     )
     register_model(clf, comet_exp, f"./models/{EXP_NAME}.pickle")
