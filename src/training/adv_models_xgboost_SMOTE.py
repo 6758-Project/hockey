@@ -3,10 +3,15 @@
 import os
 import logging
 import pandas as pd
+
 import comet_ml
+
+from imblearn.over_sampling import SMOTE
+
 import xgboost as xgb
 
 from utils import (
+    RANDOM_STATE,
     INFREQUENT_STOPPAGE_EVENTS,
     TRAIN_COLS_PART_4,
     LABEL_COL,
@@ -18,7 +23,7 @@ from utils import (
 logging.basicConfig(level=logging.INFO)
 
 
-EXP_NAME = "xgboost_feats_non_corr"
+EXP_NAME = "xgboost_SMOTE"
 
 EXP_PARAMS = {"model_type": "xgboost"}
 
@@ -56,6 +61,17 @@ def preprocess(X_train, X_val):
 if __name__ == "__main__":
     X_train, Y_train, X_val, Y_val = load_train_and_validation()
     X_train, X_val = preprocess(X_train, X_val)
+
+    # the redundant features after inspecting them in "./notebooks/M2_detect-feat-correlation.ipynb"
+    redundant_feats = ["is_rebound", "coordinate_y", "coordinate_x", "period"]
+
+    # Training and validation data of the selected features
+    selected_feats = X_train.columns.difference(redundant_feats)
+    X_train, X_val = X_train[selected_feats], X_val[selected_feats]
+
+    # Oversampling with SMOTE
+    X_train = X_train.fillna(0)
+    X_train, Y_train = SMOTE(random_state=RANDOM_STATE).fit_resample(X_train, Y_train)
 
     # chosen via results of hparam optimization search (xgboost_optimal)
     params = {
