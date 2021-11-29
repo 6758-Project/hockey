@@ -72,14 +72,6 @@ if __name__ == "__main__":
     clf = xgb.XGBClassifier(**params)
     clf.fit(X_train, Y_train)
 
-    # explain the model's predictions using SHAP
-    shap_explainer = shap.Explainer(clf)
-    shap_values = shap_explainer(X_train)
-
-    # after visualizing few predictions' explanations using this line:
-    # pred_idx = 0  # inspect the first datapoint
-    # shap.plots.waterfall(shap_values[pred_idx])
-
     # the redundant features after inspecting them in "./notebooks/M2_detect-feat-correlation.ipynb"
     redundant_feats = ["is_rebound", "coordinate_y", "coordinate_x", "period"]
 
