@@ -13,7 +13,7 @@ from utils import (
     clf_performance_metrics,
     log_experiment,
     register_model,
-    TRAIN_COLS_PART_4,
+    TRAIN_COLS_BASIC,
     LABEL_COL,
     RANDOM_STATE,
     INFREQUENT_STOPPAGE_EVENTS,
@@ -40,44 +40,28 @@ def load_train_and_validation():
     train = pd.read_csv("./data/processed/train_processed.csv")
     val = pd.read_csv("./data/processed/validation_processed.csv")
 
-    na_mask = train[TRAIN_COLS_PART_4 + [LABEL_COL]].isnull().any(axis=1)
+    na_mask = train[TRAIN_COLS_BASIC + [LABEL_COL]].isnull().any(axis=1)
     logging.info(
         f"dropping {na_mask.sum()} rows (of {len(train)} total) containing nulls from train"
     )
     train = train[~na_mask]
 
-    na_mask = val[TRAIN_COLS_PART_4 + [LABEL_COL]].isnull().any(axis=1)
+    na_mask = val[TRAIN_COLS_BASIC + [LABEL_COL]].isnull().any(axis=1)
     logging.info(
         f"dropping {na_mask.sum()} rows (of {len(val)} total) containing nulls from val"
     )
     val = val[~na_mask]
 
-    X_train = train[TRAIN_COLS_PART_4]
+    X_train = train[TRAIN_COLS_BASIC]
     Y_train = train[LABEL_COL].astype(int)
 
-    X_val = val[TRAIN_COLS_PART_4]
+    X_val = val[TRAIN_COLS_BASIC]
     Y_val = val[LABEL_COL].astype(int)
 
     return X_train, Y_train, X_val, Y_val
 
 
 def preprocess(X_train, X_val):
-
-    if "secondary_type" in X_train.columns:
-        X_train["secondary_type"].replace({"Tip-in": "Deflection"}, inplace=True)
-        X_val["secondary_type"].replace({"Tip-in": "Deflection"}, inplace=True)
-
-    if "prev_event_type" in X_train.columns:
-        X_train["prev_event_type"].replace(
-            to_replace=INFREQUENT_STOPPAGE_EVENTS, value="STOP", inplace=True
-        )
-        X_val["prev_event_type"].replace(
-            to_replace=INFREQUENT_STOPPAGE_EVENTS, value="STOP", inplace=True
-        )
-
-        X_train = pd.get_dummies(X_train, ["shot", "prev_event"])
-        X_val = pd.get_dummies(X_val, ["shot", "prev_event"])
-
     scaler = sklearn.preprocessing.StandardScaler().fit(X_train.values)
 
     X_train_scaled = pd.DataFrame(

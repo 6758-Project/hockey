@@ -118,6 +118,8 @@ if __name__ == "__main__":
     	"xgboost_lasso": "./models/predictions/xgboost_lasso.csv",
         "NN_adv": "./models/predictions/NN_adv.csv",
         "xgboost_feats_non_corr": "./models/predictions/xgboost_feats_non_corr.csv",
+        "lr_all_feats": "./models/predictions/lr_all_feats.csv",
+        "lr_non_corr_feats": "./models/predictions/lr_non_corr_feats.csv",
     }
     title = "Visual Summary - Best Performers"
     image_dir = "./figures/advanced_models/"
