@@ -4,6 +4,7 @@ import logging
 import pickle
 import warnings
 from comet_ml import Experiment
+from comet_ml import ConfusionMatrix
 import sklearn
 
 logging.basicConfig(level=logging.INFO)
@@ -97,21 +98,22 @@ def clf_performance_metrics(y_true, y_pred, y_proba, verbose=False):
         precision = sklearn.metrics.precision_score(y_true, y_pred)
         recall = sklearn.metrics.recall_score(y_true, y_pred)
 
+        cm = ConfusionMatrix()
+        cm.compute_matrix(y_true, y_pred)
+
     if verbose:
         logging.info("Accuracy is {:6.3f}".format(acc))
-        cm = sklearn.metrics.confusion_matrix(y_true, y_pred)
         logging.info(f"Confusion Matrix:\n {cm}")
-
         logging.info("F1 score is {:6.3f}".format(f1))
         logging.info("Precision score is {:6.3f}".format(precision))
         logging.info("Recall score is {:6.3f}".format(recall))
 
     res = {"accuracy": acc, "f1_score": f1, "precision": precision, "recall": recall}
 
-    return res
+    return res, cm
 
 
-def log_experiment(params, perf_metrics, X_train, exp_name=None):
+def log_experiment(params, perf_metrics, X_train, confusion_matrix, exp_name=None):
     """Log model parameters and performance metrics to Comet.
     Args:
         params: Model parameters
@@ -127,6 +129,7 @@ def log_experiment(params, perf_metrics, X_train, exp_name=None):
     comet_exp.log_parameters(params)
     comet_exp.log_metrics(perf_metrics)
     comet_exp.log_dataset_hash(X_train)
+    comet_exp.log_confusion_matrix(matrix=confusion_matrix)
 
     if exp_name:
         comet_exp.set_name(exp_name)
