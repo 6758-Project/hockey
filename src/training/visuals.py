@@ -4,6 +4,7 @@ from typing import List
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.pylab as pl
 import pandas as pd
 
 from sklearn import metrics
@@ -35,9 +36,10 @@ def generate_shot_classifier_charts(
     fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(15,15))
 
     M = len(exp_names)
+    colors = pl.cm.jet(np.linspace(0,1,M))
     for i in range(M):
 
-        color=next(axes[0,0]._get_lines.prop_cycler)['color']
+        color=colors[i]
 
         ax = roc_auc_curve(
             y_trues[i], y_probas[i], label=exp_names[i],
