@@ -113,13 +113,38 @@ if __name__ == "__main__":
         image_dir=image_dir,
     )
 
-    # Generate figures for the best models so far
+    # Generate figures for advanced logistic regression
     best_exp_pred_filenames = {
-    	"xgboost_lasso": "./models/predictions/xgboost_lasso.csv",
-        "NN_adv": "./models/predictions/NN_adv.csv",
-        "xgboost_feats_non_corr": "./models/predictions/xgboost_feats_non_corr.csv",
         "lr_all_feats": "./models/predictions/lr_all_feats.csv",
         "lr_non_corr_feats": "./models/predictions/lr_non_corr_feats.csv",
+    }
+    title = "Visual Summary - Advanced Logistic_Regression"
+    image_dir = "./figures/advanced_models/"
+    generate_adv_model_figures(
+        experiment_prediction_filenames=best_exp_pred_filenames,
+        title=title,
+        image_dir=image_dir,
+    )
+
+    # Generate figures for SMOTE experiments
+    best_exp_pred_filenames = {
+        "xgboost_SMOTE": "./models/predictions/xgboost_SMOTE.csv",
+        "lr_SMOTE": "./models/predictions/lr_SMOTE.csv",
+    }
+    title = "Visual Summary - LR vs XGBoost + SMOTE"
+    image_dir = "./figures/advanced_models/"
+    generate_adv_model_figures(
+        experiment_prediction_filenames=best_exp_pred_filenames,
+        title=title,
+        image_dir=image_dir,
+    )
+
+    # Generate figures for the best models so far
+    best_exp_pred_filenames = {
+    	
+        "NN_adv": "./models/predictions/NN_adv.csv",
+        "xgboost_feats_non_corr": "./models/predictions/xgboost_feats_non_corr.csv",
+        "xgboost_SMOTE": "./models/predictions/xgboost_SMOTE.csv",
     }
     title = "Visual Summary - Best Performers"
     image_dir = "./figures/advanced_models/"
