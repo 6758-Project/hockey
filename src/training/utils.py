@@ -44,6 +44,10 @@ KNOWN_NON_TRAIN_COLS = [
     "is_goal",
 ]
 
+TRAIN_COLS_DISTANCE = ["distance_from_net"]
+TRAIN_COLS_ANGLE = ["angle"]
+TRAIN_COLS_BASELINE = ["distance_from_net", "angle"]
+
 TRAIN_COLS_BASIC = [
     "period",
     "goals_home",
@@ -53,6 +57,50 @@ TRAIN_COLS_BASIC = [
     "coordinate_y",
     "distance_from_net",
     "angle",
+]
+
+
+SHAP_COLS = [
+            "distance_from_net",
+            "is_rebound",
+            "prev_event_SHOT",
+            "prev_event_time_diff",
+            "angle",
+            "is_empty_net",
+            "shot_Snap Shot",
+            "shot_Slap Shot",
+            "distance_from_prev_event",
+            "coordinate_y",
+            "prev_event_HIT"
+            ]
+
+LASSO_COLS = [
+            "coordinate_x",
+            "coordinate_y",
+            "distance_from_net",
+            "angle",
+            "angle_between_prev_event",
+            "distance_from_prev_event",
+            "prev_event_time_diff",
+            "speed",
+            "is_rebound",
+            "rebound_angle",
+            "is_empty_net",
+            "prev_event_x_coord",
+            "shot_Backhand",
+            "shot_Tip-In",
+            "shot_Wrist Shot",
+            "prev_event_FACEOFF",
+            "prev_event_GIVEAWAY",
+            "prev_event_HIT",
+            "prev_event_SHOT",
+            ]
+
+NON_CORR_COLS = [
+    "period",
+    "coordinate_x",
+    "coordinate_y",
+    "is_rebound",
 ]
 
 # TODO: throw out is_empty_net + associated rows?
@@ -74,6 +122,25 @@ TRAIN_COLS_PART_4 = [
     "rebound_angle",
     "is_empty_net",
 ]  # 'period_type', 'shooter_team_name', 'shooter_id', 'goalie_name',
+
+TRAIN_COLS_LASSO = [
+    "game_sec",
+    "period",
+    "secondary_type",
+    "coordinate_x",
+    "coordinate_y",
+    "distance_from_net",
+    "angle",
+    "prev_event_type",
+    "angle_between_prev_event",
+    "distance_from_prev_event",
+    "prev_event_time_diff",
+    "speed",
+    "is_rebound",
+    "rebound_angle",
+    "is_empty_net",
+    "prev_event_x_coord",
+] 
 
 RANDOM_STATE = 1729
 

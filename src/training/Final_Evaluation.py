@@ -26,7 +26,11 @@ from collections import ChainMap
 from utils import (
     EXP_KWARGS,
     INFREQUENT_STOPPAGE_EVENTS,
+    TRAIN_COLS_DISTANCE,
+    TRAIN_COLS_ANGLE,
+    TRAIN_COLS_BASELINE, 
     TRAIN_COLS_PART_4,
+    TRAIN_COLS_LASSO,
     LABEL_COL,
     clf_performance_metrics,
     log_experiment,
@@ -34,9 +38,6 @@ from utils import (
     RANDOM_STATE,
 )
 
-TRAIN_COLS_DISTANCE = ["distance_from_net"]
-TRAIN_COLS_ANGLE = ["angle"]
-TRAIN_COLS_BASELINE = ["distance_from_net", "angle"]
 
 
 
@@ -66,19 +67,19 @@ MODELINFO_C = {
     "Col": TRAIN_COLS_BASELINE
 }
 MODELINFO_D = {
-    "model_type": "xgboost",
-    "Name": "XGBoost Model with Lasso", 
-    "CometModelName": "xgboost-lasso", 
+    "model_type": "xgboost_SHAP",
+    "Name": "XGBoost Model with SHAP", 
+    "CometModelName": "xgboost-shap", 
     "Version": "1.0.1",
-    "FileName": "xgboost_lasso" ,
+    "FileName": "xgboost_SHAP" ,
     "Col": TRAIN_COLS_PART_4
 }
 MODELINFO_E = {
-    "model_type": "NN_MLP",
-    "Name": "Neural Network - Advance Features", 
-    "CometModelName": "nn-adv",
+    "model_type": "xgboost_non_corr",
+    "Name": "XGBoost with Non Correlated Features", 
+    "CometModelName": "xgboost-feats-non-corr",
     "Version": "1.0.1", 
-    "FileName": "NN_adv",
+    "FileName": "xgboost_feats_non_corr",
     "Col": TRAIN_COLS_PART_4
 }
 
@@ -133,7 +134,7 @@ def main(args):
             X_Train, Y_Train = load_dataset(Model_Param["Col"],TrainPath)
             
             X_Processed, Y_Processed = Process_Data(X_Test,Y_Test,X_Train,Model_Param["model_type"])
-
+            
             y_pred = clf.predict(X_Processed)
             y_proba = clf.predict_proba(X_Processed)[:, 1]
             
@@ -141,8 +142,10 @@ def main(args):
             res = pd.DataFrame({"y_true": Y_Processed, "y_preds": y_pred, "y_proba": y_proba})
             res.to_csv(csv_path, index=False)
 
-            perf_metrics = clf_performance_metrics(Y_Processed, y_pred, y_proba, verbose=True)
-
+            #perf_metrics, cm = clf_performance_metrics(Y_Processed, y_pred, y_proba, verbose=True)
+            acc = sklearn.metrics.accuracy_score(Y_Processed, y_pred)
+            logging.info("Accuracy is {:6.3f}".format(acc))
+            
             exp_pred_filename = {Model_Param["FileName"]: csv_path}
             experiment_prediction_filenames.append(exp_pred_filename)
 

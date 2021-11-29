@@ -6,22 +6,9 @@ import pandas as pd
 import sklearn
 from utils import (
     INFREQUENT_STOPPAGE_EVENTS,
-    LABEL_COL,
+    LABEL_COL, SHAP_COLS, LASSO_COLS,NON_CORR_COLS
 )
 
-SHAP_COLS = [
-            "distance_from_net",
-            "is_rebound",
-            "prev_event_SHOT",
-            "prev_event_time_diff",
-            "angle",
-            "is_empty_net",
-            "shot_Snap Shot",
-            "shot_Slap Shot",
-            "distance_from_prev_event",
-            "coordinate_y",
-            "prev_event_HIT"
-            ]
 
 
 def Process_Data(X_Test,Y_Test,X_Train,Model_Type):     
@@ -30,10 +17,18 @@ def Process_Data(X_Test,Y_Test,X_Train,Model_Type):
         X_processed, Y_processed = LG_preprocess(X_Train,X_Test,Y_Test)
         return X_processed, Y_processed
         
-    if Model_Type == "xgboost":
-        X_processed = XGB_preprocess(X_Test)
+    if Model_Type == "xgboost_SHAP":
+        X_processed = XGB_SHAP_preprocess(X_Test)
         return X_processed, Y_Test
-        
+
+    if Model_Type == "xgboost_Lasso":
+        X_processed = XGB_Lasso_preprocess(X_Test)
+        return X_processed, Y_Test
+    
+    if Model_Type == "xgboost_non_corr":
+        X_processed = XGB_Non_Corr_preprocess(X_Test)
+        return X_processed, Y_Test
+    
     if Model_Type == "NN_MLP":
         X_processed = NN_preprocess(X_Test,X_Train)
         return X_processed, Y_Test
@@ -61,7 +56,7 @@ def LG_preprocess(X_train, X_data, y_data):
 
 
 #XGBoost with SHAP
-def XGB_preprocess(X_data):
+def XGB_SHAP_preprocess(X_data):
 
     X_data["secondary_type"].replace({"Tip-in": "Deflection"}, inplace=True)
     X_data["prev_event_type"].replace(
@@ -74,6 +69,35 @@ def XGB_preprocess(X_data):
 
     return X_data
 
+
+#XGBoost with Lasso
+def XGB_Lasso_preprocess(X_data):
+
+    X_data["secondary_type"].replace({"Tip-in": "Deflection"}, inplace=True)
+    X_data["prev_event_type"].replace(
+        to_replace=INFREQUENT_STOPPAGE_EVENTS, value="STOP", inplace=True
+    )
+
+    X_data = pd.get_dummies(X_data, ["shot", "prev_event"])
+    
+    X_data = X_data[LASSO_COLS]
+
+    return X_data
+
+def XGB_Non_Corr_preprocess(X_data):
+
+    X_data["secondary_type"].replace({"Tip-in": "Deflection"}, inplace=True)
+    X_data["prev_event_type"].replace(
+        to_replace=INFREQUENT_STOPPAGE_EVENTS, value="STOP", inplace=True
+    )
+
+    X_data = pd.get_dummies(X_data, ["shot", "prev_event"])
+    
+    selected_feats = X_data.columns.difference(NON_CORR_COLS)
+    X_data = X_data[selected_feats]
+
+
+    return X_data
 
 #Neural Network with Advance
 def NN_preprocess(X_data,X_train):
