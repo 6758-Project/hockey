@@ -36,7 +36,7 @@ BASELINE_EXP_NAMES = [
 ]
 
 
-ddef load_train_and_validation():
+def load_train_and_validation():
     train = pd.read_csv("./data/processed/train_processed.csv")
     val = pd.read_csv("./data/processed/validation_processed.csv")
 
